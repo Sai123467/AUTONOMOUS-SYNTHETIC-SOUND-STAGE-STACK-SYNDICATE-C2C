@@ -19,7 +19,7 @@ public class SoundstageHUD : MonoBehaviour
         crosshairTexture.Apply();
 
         solidTexture = new Texture2D(1, 1);
-        solidTexture.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.70f));
+        solidTexture.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.72f));
         solidTexture.Apply();
     }
 
@@ -28,10 +28,10 @@ public class SoundstageHUD : MonoBehaviour
         DrawCrosshair();
 
         // 1. Controls & Engine State Window (Top Left)
-        DrawControlsPanel(new Rect(15, 15, 390, 295));
+        DrawControlsPanel(new Rect(15, 15, 395, 295));
 
-        // 2. Beginner-Friendly Telemetry & Live Data (Bottom Left)
-        DrawComparisonTelemetry(new Rect(15, Screen.height - 235, 490, 220));
+        // 2. Telemetry, Inspector & Resynthesis Readout (Bottom Left)
+        DrawComparisonTelemetry(new Rect(15, Screen.height - 245, 510, 230));
 
         // 3. Real-Time Hardware Oscilloscope (Top Right)
         DrawLiveOscilloscope(new Rect(Screen.width - 265, 15, 250, 120));
@@ -45,42 +45,44 @@ public class SoundstageHUD : MonoBehaviour
         if (soundstage.isAudioMuted)
         {
             GUI.color = Color.red;
-            GUI.Label(new Rect(rect.x + 12, rect.y + 26, 360, 20), "STATUS: <b>AUDIO ENGINE MUTED [M]</b>");
+            GUI.Label(new Rect(rect.x + 12, rect.y + 26, 370, 20), "STATUS: <b>AUDIO ENGINE MUTED [M]</b>");
             GUI.color = Color.white;
         }
         else
         {
             GUI.color = soundstage.isComparisonMode ? Color.yellow : Color.cyan;
             string modeName = soundstage.isComparisonMode ? "STATIC PRE-RECORDED (.WAV) MODE" : "ZERO-WAV PROCEDURAL DSP ENGINE";
-            GUI.Label(new Rect(rect.x + 12, rect.y + 26, 360, 20), $"ENGINE: <b>{modeName}</b>");
+            GUI.Label(new Rect(rect.x + 12, rect.y + 26, 370, 20), $"ENGINE: <b>{modeName}</b>");
             GUI.color = Color.white;
 
-            GUI.Label(new Rect(rect.x + 12, rect.y + 46, 360, 18), $"Current Season: <b>{soundstage.currentSeason}</b> [Tab]");
-            GUI.Label(new Rect(rect.x + 12, rect.y + 64, 360, 18), $"Active Emotion: <b>{soundstage.currentEmotion}</b> [Keys 1-6]");
-            GUI.Label(new Rect(rect.x + 12, rect.y + 82, 360, 18), $"Dynamic Ground Patch: <b>Patch #{((int)(Time.time * 0.5f) % 4) + 1} (Evolving every 2s)</b>");
+            GUI.Label(new Rect(rect.x + 12, rect.y + 46, 370, 18), $"Current Season: <b>{soundstage.currentSeason}</b> [Tab]");
+            GUI.Label(new Rect(rect.x + 12, rect.y + 64, 370, 18), $"Active Emotion: <b>{soundstage.currentEmotion}</b> [Keys 1-6]");
+            GUI.Label(new Rect(rect.x + 12, rect.y + 82, 370, 18), $"Dynamic Ground Patch: <b>Patch #{((int)(Time.time * 0.5f) % 4) + 1} (Evolving every 2s)</b>");
 
+            // Environmental Acoustic Chamber Detection
             if (SoundstageRig.IsInCave)
             {
                 GUI.color = new Color(0.4f, 1.0f, 0.4f);
-                GUI.Label(new Rect(rect.x + 12, rect.y + 100, 360, 18), "Acoustic Environment: <b>CAVERN (3.2s Echo Active)</b>");
+                GUI.Label(new Rect(rect.x + 12, rect.y + 100, 370, 18), "Acoustic Environment: <b>CAVERN (4.0s Echo Active)</b>");
                 GUI.color = Color.white;
             }
             else
             {
-                GUI.Label(new Rect(rect.x + 12, rect.y + 100, 360, 18), $"Acoustic Environment: <b>Open Forest (Gaze: {soundstage.windCutoff:F0}Hz)</b>");
+                GUI.Label(new Rect(rect.x + 12, rect.y + 100, 370, 18), $"Acoustic Environment: <b>Open Forest (Gaze: {soundstage.windCutoff:F0}Hz)</b>");
             }
         }
 
+        // Controls Section
         GUI.color = Color.yellow;
-        GUI.Label(new Rect(rect.x + 12, rect.y + 126, 360, 18), "<b>CONTROLS:</b>");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 126, 370, 18), "<b>CONTROLS:</b>");
         GUI.color = Color.white;
-        GUI.Label(new Rect(rect.x + 12, rect.y + 146, 360, 18), "[T] Toggle A/B Test (Compare vs Traditional .WAV)");
-        GUI.Label(new Rect(rect.x + 12, rect.y + 164, 360, 18), "[Left Click / E] Strike Obstacles, Monster or River Rocks");
-        GUI.Label(new Rect(rect.x + 12, rect.y + 182, 360, 18), "[1-5] Synthesize Emotions  |  [6] Neutral Silence");
-        GUI.Label(new Rect(rect.x + 12, rect.y + 200, 360, 18), "[Tab] Cycle Seasons (Winter, Summer, Spring, Autumn)");
-        GUI.Label(new Rect(rect.x + 12, rect.y + 218, 360, 18), "[M] Mute Soundstage");
-        GUI.Label(new Rect(rect.x + 12, rect.y + 238, 360, 18), "• Walk to X:30, Z:25 to enter the Cavern & Monster Den");
-        GUI.Label(new Rect(rect.x + 12, rect.y + 256, 360, 18), "• Walk into River for dynamic water vs ice footsteps");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 146, 370, 18), "[T] Toggle A/B Test (Compare vs Traditional .WAV)");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 164, 370, 18), "[Left Click / E] Strike Obstacles, Monster or River Rocks");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 182, 370, 18), "[1-5] Synthesize Emotions  |  [6] Neutral Silence");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 200, 370, 18), "[Tab] Cycle Seasons (Winter, Summer, Spring, Autumn)");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 218, 370, 18), "[M] Mute Soundstage");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 238, 370, 18), "• Walk to X:30, Z:25 to enter Cavern & Monster Den");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 256, 370, 18), "• Walk into River for dynamic water vs ice footsteps");
     }
 
     void DrawComparisonTelemetry(Rect rect)
@@ -90,34 +92,46 @@ public class SoundstageHUD : MonoBehaviour
 
         bool isWav = soundstage.isComparisonMode;
 
-        GUI.Label(new Rect(rect.x + 12, rect.y + 28, 160, 20), "Acoustic Origin:");
+        // Metric 1: Source Origin
+        GUI.Label(new Rect(rect.x + 12, rect.y + 26, 160, 18), "Acoustic Origin:");
         GUI.color = isWav ? Color.yellow : Color.cyan;
-        GUI.Label(new Rect(rect.x + 175, rect.y + 28, 305, 20), isWav ? "Pre-Recorded Static .WAV File" : "Real-Time DSP Mathematical Synthesis");
+        GUI.Label(new Rect(rect.x + 175, rect.y + 26, 325, 18), isWav ? "Pre-Recorded Static .WAV File" : "Real-Time DSP Mathematical Synthesis");
         GUI.color = Color.white;
 
-        GUI.Label(new Rect(rect.x + 12, rect.y + 52, 160, 20), "Asset Disk & RAM Usage:");
+        // Metric 2: Asset Memory Storage
+        GUI.Label(new Rect(rect.x + 12, rect.y + 46, 160, 18), "Asset Disk & RAM Usage:");
         GUI.color = isWav ? new Color(1f, 0.4f, 0.4f) : new Color(0.3f, 1f, 0.4f);
-        GUI.Label(new Rect(rect.x + 175, rect.y + 52, 305, 20), isWav ? "~18.4 MB (Uncompressed Samples)" : "<b>0.00 KB</b> (Zero Audio Files Stored)");
+        GUI.Label(new Rect(rect.x + 175, rect.y + 46, 325, 18), isWav ? "~18.4 MB (Uncompressed Samples)" : "<b>0.00 KB</b> (Zero Audio Files Stored)");
         GUI.color = Color.white;
 
-        GUI.Label(new Rect(rect.x + 12, rect.y + 76, 160, 20), "Sample Uniqueness:");
+        // Metric 3: Waveform Uniqueness (Entropy)
+        GUI.Label(new Rect(rect.x + 12, rect.y + 66, 160, 18), "Sample Uniqueness:");
         GUI.color = isWav ? new Color(1f, 0.5f, 0.5f) : new Color(0.3f, 1f, 0.4f);
-        GUI.Label(new Rect(rect.x + 175, rect.y + 76, 305, 20), isWav ? "0% (Repeats exact same clip)" : "100% (Unique wave calculated per step)");
+        GUI.Label(new Rect(rect.x + 175, rect.y + 66, 325, 18), isWav ? "0% (Repeats exact same clip)" : "100% (Unique wave calculated per step)");
         GUI.color = Color.white;
 
-        GUI.Label(new Rect(rect.x + 12, rect.y + 104, 160, 20), "Active DSP Formula:");
+        // Metric 4: Active Synthesis Equation & Physics
+        GUI.Label(new Rect(rect.x + 12, rect.y + 88, 160, 18), "Active DSP Formula:");
         GUI.color = Color.white;
         string formula = isWav ? "N/A (Static playback buffer)" : ProceduralFoley.LastSynthesisFormula;
-        GUI.Label(new Rect(rect.x + 175, rect.y + 104, 305, 20), $"<i>{formula}</i>");
+        GUI.Label(new Rect(rect.x + 175, rect.y + 88, 325, 18), $"<i>{formula}</i>");
 
-        GUI.Label(new Rect(rect.x + 12, rect.y + 128, 160, 20), "Fundamental Frequency:");
-        GUI.Label(new Rect(rect.x + 175, rect.y + 128, 305, 20), isWav ? "Locked at 180 Hz" : $"{ProceduralFoley.LastFundamentalFreq:F1} Hz (Dynamic weight shift)");
+        // Metric 5: Live Physical Parameters
+        GUI.Label(new Rect(rect.x + 12, rect.y + 108, 160, 18), "Fundamental Frequency:");
+        GUI.Label(new Rect(rect.x + 175, rect.y + 108, 325, 18), isWav ? "Locked at 180 Hz" : $"{ProceduralFoley.LastFundamentalFreq:F1} Hz (Dynamic weight shift)");
 
-        GUI.Label(new Rect(rect.x + 12, rect.y + 152, 160, 20), "Physical Decay Window:");
-        GUI.Label(new Rect(rect.x + 175, rect.y + 152, 305, 20), isWav ? "Fixed clip duration" : $"{ProceduralFoley.LastDecayTimeMs:F0} ms (Surface resistance)");
+        GUI.Label(new Rect(rect.x + 12, rect.y + 128, 160, 18), "Physical Decay Window:");
+        GUI.Label(new Rect(rect.x + 175, rect.y + 128, 325, 18), isWav ? "Fixed clip duration" : $"{ProceduralFoley.LastDecayTimeMs:F0} ms (Surface resistance)");
 
+        // Metric 6: Diegetic Harmonization Readout
+        GUI.Label(new Rect(rect.x + 12, rect.y + 148, 160, 18), "Harmonic Resynthesis:");
+        GUI.color = new Color(0.6f, 0.9f, 1f);
+        GUI.Label(new Rect(rect.x + 175, rect.y + 148, 325, 18), isWav ? "Disabled (Decoupled audio)" : "Active (Foley transients modulate BGM)");
+        GUI.color = Color.white;
+
+        // Total Synthesized Waveforms counter
         GUI.color = Color.yellow;
-        GUI.Label(new Rect(rect.x + 12, rect.y + 184, 470, 20),
+        GUI.Label(new Rect(rect.x + 12, rect.y + 178, 485, 18),
             isWav ? "MODE STATUS: Demonstrating canned, pre-recorded audio limitations."
                   : $"GENERATIVE ENGINE ACTIVE: <b>{ProceduralFoley.TotalSynthesizedWaves}</b> unique audio waves generated this session.");
         GUI.color = Color.white;
@@ -135,7 +149,7 @@ public class SoundstageHUD : MonoBehaviour
 
         Color crosshairColor = new Color(1f, 1f, 1f, 0.75f);
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit, 3.5f))
+        if (Physics.Raycast(ray, out RaycastHit hit, 4.0f))
         {
             string n = hit.collider.gameObject.name.ToLower();
             if (n.Contains("trunk") || n.Contains("log") || n.Contains("boulder") || n.Contains("rock") || n.Contains("croc") || n.Contains("monster") || n.Contains("cave") || n.Contains("bush") || n.Contains("canopy") || n.Contains("altar"))

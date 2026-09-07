@@ -11,7 +11,7 @@ public class SoundstageRig : MonoBehaviour
 
     public static bool IsInCave = false;
     public Vector3 caveCenter = new Vector3(30f, 0f, 25f);
-    public float caveRadius = 14.0f; // Matches expanded cavern
+    public float caveRadius = 15.0f; // Extended threshold for smooth cavern entry
 
     private CharacterController controller;
     private float rotX = 0f;
@@ -24,8 +24,24 @@ public class SoundstageRig : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>();
+        if (playerCamera == null) playerCamera = Camera.main;
+
+        // Auto-locate reverb filter on this object or camera
         if (reverb == null) reverb = GetComponent<AudioReverbFilter>();
+        if (reverb == null && playerCamera != null) reverb = playerCamera.GetComponent<AudioReverbFilter>();
         if (reverb == null && Camera.main != null) reverb = Camera.main.GetComponent<AudioReverbFilter>();
+
+        // If none exists, dynamically attach one to the active player camera
+        if (reverb == null && playerCamera != null)
+        {
+            reverb = playerCamera.gameObject.AddComponent<AudioReverbFilter>();
+        }
+
+        if (reverb != null)
+        {
+            reverb.enabled = true;
+            reverb.reverbPreset = AudioReverbPreset.Off; // Default off outdoors
+        }
 
         Cursor.lockState = CursorLockMode.Locked;
     }
@@ -72,10 +88,12 @@ public class SoundstageRig : MonoBehaviour
             {
                 if (foley != null && soundstage != null && !soundstage.isAudioMuted)
                 {
+                    // Check if player is standing inside the river boundary (|x| <= 3.8m)
                     bool isInsideRiver = Mathf.Abs(transform.position.x) <= 3.8f;
-                    if (isInsideRiver && soundstage.currentSeason != Season.Winter)
+                    if (isInsideRiver)
                     {
-                        foley.TriggerWaterStep();
+                        // Passes the current season to synthesize specific river acoustics (winter ice vs. seasonal splashes)
+                        foley.TriggerSeasonalWaterStep(soundstage.currentSeason);
                     }
                     else
                     {
@@ -87,6 +105,7 @@ public class SoundstageRig : MonoBehaviour
         }
     }
 
+    // Dynamic, deep acoustic reverberation chamber
     void HandleCaveAcoustics()
     {
         float distToCave = Vector3.Distance(
@@ -99,17 +118,18 @@ public class SoundstageRig : MonoBehaviour
         {
             if (IsInCave)
             {
-                reverb.enabled = true;
+                // Prominent cavern stone echo reflections
                 reverb.reverbPreset = AudioReverbPreset.Cave;
                 reverb.dryLevel = 0f;
-                reverb.room = -100f;
-                reverb.roomHF = -500f;
-                reverb.decayTime = 3.2f; // Long stone echo decay
-                reverb.reflectionsLevel = -600f;
+                reverb.room = 0f;
+                reverb.roomHF = -300f;
+                reverb.decayTime = 4.0f; // 4-second stone decay tail
+                reverb.reflectionsLevel = 400f;
+                reverb.reverbLevel = 1000f;
             }
             else
             {
-                reverb.enabled = false;
+                reverb.reverbPreset = AudioReverbPreset.Off;
             }
         }
     }
@@ -134,7 +154,7 @@ public class SoundstageRig : MonoBehaviour
         if (isAttacking)
         {
             Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
-            if (Physics.Raycast(ray, out RaycastHit hit, 3.5f))
+            if (Physics.Raycast(ray, out RaycastHit hit, 4.0f))
             {
                 string hitName = hit.collider.gameObject.name.ToLower();
 
@@ -144,7 +164,7 @@ public class SoundstageRig : MonoBehaviour
                 }
                 else if (hitName.Contains("boulder") || hitName.Contains("rock") || hitName.Contains("croc") || hitName.Contains("cave") || hitName.Contains("monster") || hitName.Contains("altar"))
                 {
-                    foley.TriggerImpact(ImpactMaterial.Rock, 1.2f);
+                    foley.TriggerImpact(ImpactMaterial.Rock, 1.3f);
                 }
                 else if (hitName.Contains("canopy") || hitName.Contains("bush"))
                 {
@@ -171,7 +191,7 @@ public class SoundstageRig : MonoBehaviour
                     foley.TriggerImpact(ImpactMaterial.Wood, 0.65f);
                     collisionSoundCooldown = 0.35f;
                 }
-                else if (hitName.Contains("boulder") || hitName.Contains("rock") || hitName.Contains("croc") || hitName.Contains("cave"))
+                else if (hitName.Contains("boulder") || hitName.Contains("rock") || hitName.Contains("croc") || hitName.Contains("cave") || hitName.Contains("monster"))
                 {
                     foley.TriggerImpact(ImpactMaterial.Rock, 0.75f);
                     collisionSoundCooldown = 0.35f;

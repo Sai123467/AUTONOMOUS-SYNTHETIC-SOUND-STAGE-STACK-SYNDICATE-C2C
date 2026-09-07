@@ -5,15 +5,20 @@ public enum ImpactMaterial { Wood, Rock, Foliage }
 [RequireComponent(typeof(AudioSource))]
 public class ProceduralFoley : MonoBehaviour
 {
+    // Telemetry properties displayed on the Live Inspector HUD
     public static string LastSoundTriggered = "Idle";
     public static string LastSynthesisFormula = "Idle";
     public static float LastFundamentalFreq = 0f;
     public static float LastDecayTimeMs = 0f;
     public static int TotalSynthesizedWaves = 0;
 
+    [Header("Harmonic Synthesizer Link")]
+    public ProceduralFoleySynthesizer foleySynth;
+
     private AudioSource audioSource;
     private System.Random rnd = new System.Random();
 
+    // 2-Second Ground Texture State Tracking
     private float variationTimer = 0f;
     private int groundSubVariation = 0;
     private bool isLeftFoot = false;
@@ -21,7 +26,12 @@ public class ProceduralFoley : MonoBehaviour
     void Awake()
     {
         audioSource = GetComponent<AudioSource>();
-        audioSource.spatialBlend = 0.0f;
+        audioSource.spatialBlend = 0.0f; // 2D First-person player foley
+
+        if (foleySynth == null)
+        {
+            foleySynth = FindAnyObjectByType<ProceduralFoleySynthesizer>();
+        }
     }
 
     void Update()
@@ -34,6 +44,7 @@ public class ProceduralFoley : MonoBehaviour
         }
     }
 
+    // Standard Land Footsteps
     public void TriggerSeasonalStep(Season activeSeason)
     {
         isLeftFoot = !isLeftFoot;
@@ -80,7 +91,6 @@ public class ProceduralFoley : MonoBehaviour
                         {
                             float decayRate = 10f + groundSubVariation * 3.5f;
                             float snowEnv = Mathf.Exp(-tToe * decayRate);
-
                             float crystalCutoff = 2200f + groundSubVariation * 650f;
                             float crackChance = 0.08f + groundSubVariation * 0.06f;
 
@@ -91,7 +101,6 @@ public class ProceduralFoley : MonoBehaviour
                             surfaceSample = (hpSurf + granularCrack) * snowEnv * 1.15f;
                             break;
                         }
-
                     case Season.Summer:
                         {
                             float earthEnv = Mathf.Exp(-tToe * (16.0f + groundSubVariation * 2.5f));
@@ -102,11 +111,9 @@ public class ProceduralFoley : MonoBehaviour
                             surfaceSample = (bpSurf + grit) * earthEnv * 0.95f;
                             break;
                         }
-
                     case Season.Spring:
                         {
                             float mudEnv = Mathf.Exp(-tToe * (7.5f + groundSubVariation * 2.0f));
-
                             float startFreq = 420f - groundSubVariation * 50f;
                             float endFreq = 120f + groundSubVariation * 25f;
                             float suctionFreq = Mathf.Lerp(startFreq, endFreq, tToe);
@@ -117,7 +124,6 @@ public class ProceduralFoley : MonoBehaviour
                             surfaceSample = (suctionOsc * 0.65f + bpSurf * 0.35f) * mudEnv * 1.1f;
                             break;
                         }
-
                     case Season.Autumn:
                         {
                             float leafEnv = Mathf.Exp(-tToe * (12.0f + groundSubVariation * 2.5f));
@@ -136,48 +142,145 @@ public class ProceduralFoley : MonoBehaviour
             pcm[i] = (heelThud + surfaceSample) * footBias * perStepJitter * 0.82f;
         }
 
-        PlaySynthesizedClip($"{activeSeason}_Step", pcm, sampleRate);
+        PlaySynthesizedClip($"{activeSeason}_LandStep", pcm, sampleRate);
     }
 
-    public void TriggerWaterStep()
+    // --- SEASONAL PHYSICAL RIVER FOOTSTEP MODEL ---
+    public void TriggerSeasonalWaterStep(Season activeSeason)
     {
         isLeftFoot = !isLeftFoot;
         int sampleRate = 44100;
-        int sampleLength = (int)(sampleRate * 0.28f);
-        float[] pcm = new float[sampleLength];
+        float footBias = isLeftFoot ? 0.95f : 1.05f;
+        float stepJitter = (float)(rnd.NextDouble() * 0.18 + 0.91);
 
-        float phase1 = 0f, phase2 = 0f;
-        float lpNoise = 0f;
-
-        float depthMod = 1.0f + groundSubVariation * 0.15f;
-        float jitter = (float)(rnd.NextDouble() * 0.15 + 0.92);
-
-        LastFundamentalFreq = 540f * depthMod;
-        LastDecayTimeMs = sampleLength * 1000f / sampleRate;
-        LastSynthesisFormula = $"Water: FM Plunge ({LastFundamentalFreq:F0}Hz->150Hz) + Cavitation Slosh";
-
-        for (int i = 0; i < sampleLength; i++)
+        // 1. WINTER: River is frozen over. Hard ice contact + subterranean stress crack (No Liquid)
+        if (activeSeason == Season.Winter)
         {
-            float t = (float)i / sampleLength;
+            int sampleLength = (int)(sampleRate * 0.22f);
+            float[] pcm = new float[sampleLength];
 
-            float entryEnv = Mathf.Exp(-t * (24.0f / depthMod));
-            float sloshEnv = Mathf.Exp(-t * (6.5f / depthMod));
+            float f0 = 480f * stepJitter;
+            float p0 = 0f;
+            float lpIce = 0f;
 
-            float freq1 = Mathf.Lerp(540f * depthMod, 150f, t);
-            float freq2 = Mathf.Lerp(900f, 280f * depthMod, t * 1.2f);
-            phase1 += 2.0f * Mathf.PI * freq1 / sampleRate;
-            phase2 += 2.0f * Mathf.PI * freq2 / sampleRate;
+            LastFundamentalFreq = f0;
+            LastDecayTimeMs = sampleLength * 1000f / sampleRate;
+            LastSynthesisFormula = "Winter River: Solid Ice Surface Impact + Resonant Stress Fracture";
 
-            float bubble = (Mathf.Sin(phase1) * 0.6f + Mathf.Sin(phase2) * 0.4f) * entryEnv;
+            for (int i = 0; i < sampleLength; i++)
+            {
+                float t = (float)i / sampleLength;
+                float env = Mathf.Exp(-t * 22.0f);
 
-            float noise = (float)(rnd.NextDouble() * 2.0 - 1.0);
-            lpNoise += CalculateAlpha(1500f, sampleRate) * (noise - lpNoise);
-            float fluidSlosh = lpNoise * sloshEnv * 0.55f;
+                // High-density crystal ring
+                p0 += 2.0f * Mathf.PI * f0 / sampleRate;
+                float ring = Mathf.Sin(p0) * 0.55f;
 
-            pcm[i] = (bubble + fluidSlosh) * jitter * 0.95f;
+                // Sub-surface crack bursts
+                float noise = (float)(rnd.NextDouble() * 2.0 - 1.0);
+                lpIce += CalculateAlpha(2800f, sampleRate) * (noise - lpIce);
+                float crack = (rnd.NextDouble() < 0.25) ? (float)(rnd.NextDouble() * 2.0 - 1.0) * 1.6f : 0f;
+
+                pcm[i] = (ring + lpIce * 0.6f + crack) * env * footBias * 0.95f;
+            }
+
+            PlaySynthesizedClip("Frozen_Ice_Step", pcm, sampleRate);
+            return;
         }
 
-        PlaySynthesizedClip("WaterSplashStep", pcm, sampleRate);
+        // 2. LIQUID SEASONS (Spring, Summer, Autumn)
+        int length = (int)(sampleRate * 0.32f); // 320ms fluid displacement window
+        float[] waterPcm = new float[length];
+
+        float phasePlunge = 0f;
+        float phaseBubbles = 0f;
+        float lpDrag = 0f;
+        float bpSpray = 0f;
+
+        // Season-dependent fluid physics parameters
+        float plungeStartFreq, plungeEndFreq;
+        float bubbleFreq;
+        float sprayCutoff;
+        float decayRate;
+        float sloshWeight;
+
+        switch (activeSeason)
+        {
+            case Season.Spring:
+                // Heavy, muddy, cold runoff: Deep suction plunge, viscous fluid slosh
+                plungeStartFreq = 380f * stepJitter;
+                plungeEndFreq = 95f;
+                bubbleFreq = 580f;
+                sprayCutoff = 1800f; // Darker, heavier droplet splash
+                decayRate = 8.5f;    // Slower, thick dissipation
+                sloshWeight = 1.3f;
+                LastSynthesisFormula = "Spring River: High Viscosity Loam Plunge + Saturated Slosh";
+                break;
+
+            case Season.Summer:
+                // Fast, warm, shallow water: High kinetic energy, bright airy droplet beads
+                plungeStartFreq = 620f * stepJitter;
+                plungeEndFreq = 220f;
+                bubbleFreq = 1100f;
+                sprayCutoff = 4800f; // Bright, crisp airborne droplets
+                decayRate = 16.0f;   // Fast dissipation
+                sloshWeight = 0.85f;
+                LastSynthesisFormula = "Summer River: Rapid Kinetic Dispersion + Bright Droplet Spray";
+                break;
+
+            case Season.Autumn:
+            default:
+                // Cool, leafy riverbed: Moderate fluid cavitation with submerged friction
+                plungeStartFreq = 480f * stepJitter;
+                plungeEndFreq = 140f;
+                bubbleFreq = 780f;
+                sprayCutoff = 2800f;
+                decayRate = 11.5f;
+                sloshWeight = 1.05f;
+                LastSynthesisFormula = "Autumn River: Fluid Cavitation + Leaf Detritus Drag";
+                break;
+        }
+
+        LastFundamentalFreq = plungeStartFreq;
+        LastDecayTimeMs = length * 1000f / sampleRate;
+
+        for (int i = 0; i < length; i++)
+        {
+            float t = (float)i / length;
+
+            // Fluid envelopes: sharp entry impact followed by rolling spray slosh
+            float entryEnv = Mathf.Exp(-t * 26.0f);
+            float sloshEnv = Mathf.Exp(-t * decayRate);
+
+            // Layer 1: Downward Fluid Cavitation Plunge (Displacement of water body)
+            float plungeFreq = Mathf.Lerp(plungeStartFreq, plungeEndFreq, t);
+            phasePlunge += 2.0f * Mathf.PI * plungeFreq / sampleRate;
+            float cavityThump = Mathf.Sin(phasePlunge) * entryEnv * 1.4f;
+
+            // Layer 2: Entrained Micro-Air Bubbles
+            phaseBubbles += 2.0f * Mathf.PI * bubbleFreq / sampleRate;
+            float bubbleRing = Mathf.Sin(phaseBubbles) * Mathf.Exp(-t * 18.0f) * 0.35f;
+
+            // Layer 3: Turbulent Droplet Spray & Fluid Slosh
+            float noise = (float)(rnd.NextDouble() * 2.0 - 1.0);
+            lpDrag += CalculateAlpha(1100f, sampleRate) * (noise - lpDrag);
+            bpSurfProcess(ref bpSpray, noise, sprayCutoff, sampleRate);
+
+            float dropletSpray = (bpSpray * 0.7f + lpDrag * 0.3f) * sloshEnv * sloshWeight;
+
+            // Layer 4: Initial Water Surface Snap / Plunge Transient (First 5ms)
+            float surfaceTensionSnap = (i < sampleRate * 0.005f) ? (float)(rnd.NextDouble() * 2.0 - 1.0) * 1.5f : 0f;
+
+            waterPcm[i] = (cavityThump + bubbleRing + dropletSpray + surfaceTensionSnap) * footBias * 0.88f;
+        }
+
+        PlaySynthesizedClip($"{activeSeason}_WaterStep", waterPcm, sampleRate);
+    }
+
+    private void bpSurfProcess(ref float state, float input, float cutoff, int sRate)
+    {
+        float alpha = CalculateAlpha(cutoff, sRate);
+        state += alpha * (input - state);
     }
 
     public void TriggerImpact(ImpactMaterial material, float force = 1.0f)
@@ -236,6 +339,11 @@ public class ProceduralFoley : MonoBehaviour
     {
         TotalSynthesizedWaves++;
         LastSoundTriggered = clipName;
+
+        if (foleySynth != null)
+        {
+            foleySynth.InjectFoleyImpulse(data);
+        }
 
         AudioClip clip = AudioClip.Create(clipName, data.Length, 1, sampleRate, false);
         clip.SetData(data, 0);

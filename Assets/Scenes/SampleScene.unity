@@ -513,6 +513,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a187f05dbacd46b4584097d4cd03a9b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProceduralFoley
+  foleySynth: {fileID: 0}
 --- !u!82 &562102268
 AudioSource:
   m_ObjectHideFlags: 0
@@ -718,6 +719,7 @@ GameObject:
   - component: {fileID: 2142376864}
   - component: {fileID: 2142376868}
   - component: {fileID: 2142376867}
+  - component: {fileID: 2142376869}
   m_Layer: 0
   m_Name: SoundEngine
   m_TagString: Untagged
@@ -897,6 +899,21 @@ MonoBehaviour:
   springRainVolume: 0.65
   tensionLevel: 0
   harmonicMode: 0
+--- !u!114 &2142376869
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2142376863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1faf54af1907e8e47af3d975112b3185, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ProceduralFoleySynthesizer
+  soundstage: {fileID: 2142376868}
+  masterSynthVolume: 0.75
+  droneResonanceDecay: 4.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

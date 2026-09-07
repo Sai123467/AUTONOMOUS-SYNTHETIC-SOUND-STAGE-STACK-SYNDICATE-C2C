@@ -12,8 +12,8 @@
   :root{
     --bg: #080b10;
     --bg-2: #0c1017;
-    --panel: #0a0e15;
-    --panel-2: #0c1119;
+    --panel: #10151d;
+    --panel-2: #141b25;
     --ink: #eaf0f5;
     --ink-dim: #8c9aa8;
     --ink-faint: #5b6774;
@@ -21,8 +21,8 @@
     --amber: #ffb454;
     --magenta: #ff6f9c;
     --violet: #8f83ff;
-    --line: rgba(234,240,245,0.06);
-    --line-strong: rgba(234,240,245,0.13);
+    --line: rgba(234,240,245,0.09);
+    --line-strong: rgba(234,240,245,0.16);
   }
 
   *{ box-sizing:border-box; }
@@ -141,6 +141,99 @@
     will-change: transform, opacity, filter;
   }
 
+  .hero-icons{
+    position:absolute; inset:0; z-index:0; pointer-events:none;
+  }
+  .float-icon{
+    position:absolute; width:60px; height:60px;
+    animation-name:icon-float; animation-timing-function:ease-in-out; animation-iteration-count:infinite;
+    pointer-events:none;
+  }
+  .icon-inner{
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--tint, var(--teal));
+    opacity:0.5;
+    pointer-events:auto; cursor:pointer;
+    will-change:transform;
+    filter:drop-shadow(0 0 0 transparent);
+    transition:opacity .25s ease, filter .25s ease;
+  }
+  .icon-inner:hover{ opacity:1; filter:drop-shadow(0 0 14px currentColor); }
+  .icon-inner svg{ width:68%; height:68%; }
+
+  @keyframes icon-float{
+    0%,100%{ transform:translateY(0) rotate(0deg); }
+    50%{ transform:translateY(-14px) rotate(5deg); }
+  }
+
+  @media (max-width:640px){
+    .hero-icons{ display:none; }
+  }
+  .float-icon.bg-icon{ z-index:-1; }
+  @media (max-width:760px){
+    .float-icon.bg-icon{ display:none; }
+  }
+
+  /* ---- hero icons: fewer, glossy 3D bubbles ---- */
+  .hero-icons .float-icon{
+    width:clamp(92px, 9vw, 148px);
+    height:clamp(92px, 9vw, 148px);
+    animation-name:hero-icon-float;
+    animation-timing-function:ease-in-out;
+    animation-iteration-count:infinite;
+  }
+  .hero-icons .icon-inner{
+    position:relative;
+    opacity:1;
+    filter:none;
+  }
+  .hero-icons .icon-inner svg{
+    width:84%; height:84%;
+    overflow:visible;
+    filter:
+      drop-shadow(0 14px 16px rgba(0,0,0,0.45))
+      drop-shadow(0 0 16px color-mix(in srgb, var(--tint) 40%, transparent));
+    transition:filter .3s ease;
+  }
+  .hero-icons .icon-inner:hover{
+    filter:none;
+  }
+  .hero-icons .icon-inner:hover svg{
+    filter:
+      drop-shadow(0 14px 16px rgba(0,0,0,0.45))
+      drop-shadow(0 0 26px color-mix(in srgb, var(--tint) 55%, transparent));
+  }
+
+  @keyframes hero-icon-float{
+    0%,100%{ transform:translateY(0) rotate(0deg) scale(1); }
+    50%{ transform:translateY(-20px) rotate(4deg) scale(1.045); }
+  }
+
+  /* slow horizontal trajectory, layered on a wrapper so it never fights
+     the bob/rotate/scale animation on the icon itself; confined to the
+     hero's own overflow:hidden stage, so it can't drift into the topics below */
+  .hero-icons .icon-drift{
+    position:absolute;
+    animation-name:icon-drift-move;
+    animation-timing-function:ease-in-out;
+    animation-iteration-count:infinite;
+  }
+  .hero-icons .icon-drift .float-icon{
+    position:relative; left:auto; top:auto;
+  }
+  @keyframes icon-drift-move{
+    0%, 100%{ transform:translateX(0); }
+    50%{ transform:translateX(var(--drift, 34px)); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .hero-icons .icon-drift{ animation:none; }
+  }
+
+  @media (max-width:900px){
+    .hero-icons .float-icon{ width:clamp(70px, 13vw, 102px); height:clamp(70px, 13vw, 102px); }
+  }
+
   .hero-shards{ position:absolute; inset:0; pointer-events:none; }
   .shard{
     position:absolute; width:6px; height:6px; border-radius:50%;
@@ -166,29 +259,11 @@
 
   .waveform-under{
     position:absolute; bottom:0; left:0; right:0; width:100%; height:38%;
-    display:block;
-    opacity:0; pointer-events:none;
-    -webkit-clip-path:inset(0 0 0 100%);
-            clip-path:inset(0 0 0 100%);
-    animation:wave-sweep-in 1.9s cubic-bezier(.16,.8,.24,1) .15s forwards;
-  }
-  @keyframes wave-sweep-in{
-    0%{ -webkit-clip-path:inset(0 0 0 100%); clip-path:inset(0 0 0 100%); opacity:0; }
-    8%{ opacity:0.5; }
-    100%{ -webkit-clip-path:inset(0 0 0 0%); clip-path:inset(0 0 0 0%); opacity:0.5; }
-  }
-  @media (prefers-reduced-motion: reduce){
-    .waveform-under{ animation:none; opacity:0.5; clip-path:none; -webkit-clip-path:none; }
+    opacity:0.5; pointer-events:none;
   }
 
   /* ================= INTRO STRIP ================= */
-  .glow-field{
-    position:absolute; inset:0; z-index:-1; overflow:visible; pointer-events:none;
-  }
-  .glow-field span{
-    position:absolute; width:46vw; height:46vw; border-radius:50%;
-    filter:blur(90px); opacity:0.16;
-  }
+  .glow-field{ display:none; }
 
   .lede{
     max-width:760px; margin:0 auto; padding:10vh 24px 16vh;
@@ -215,42 +290,30 @@
   }
 
   .card{
-    opacity:0; transition:opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1);
+    opacity:0; transition:opacity 1.1s ease;
+  }
+  .card.in-view{ opacity:1; }
+  .card-slide{
+    transition:transform 1.1s cubic-bezier(.16,.7,.2,1);
     perspective:1100px;
   }
-  .card.left{ transform:translate(-64px, 34px); }
-  .card.right{ transform:translate(64px, 34px); }
-  .card.in-view{ opacity:1; transform:translate(0,0); }
+  .card.left .card-slide{ transform:translate(-130vw, 34px) perspective(1200px) rotateY(-28deg); }
+  .card.right .card-slide{ transform:translate(130vw, 34px) perspective(1200px) rotateY(28deg); }
+  .card.in-view .card-slide{ transform:translate(0,0) perspective(1200px) rotateY(0deg); }
 
   .card-inner{
     display:grid; grid-template-columns:1.1fr 1.4fr; gap:36px; align-items:center;
-    background:
-      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
-      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
-    backdrop-filter: blur(30px) saturate(150%);
-    -webkit-backdrop-filter: blur(30px) saturate(150%);
-    border:1px solid rgba(234,240,245,0.07);
-    border-top-color:rgba(234,240,245,0.14);
-    border-radius:28px;
+    background:radial-gradient(140% 170% at 24% 14%, var(--panel) 0%, var(--panel-2) 45%, var(--bg) 100%);
+    border:1px solid transparent; border-radius:28px;
     padding:34px clamp(20px,3.4vw,44px);
+    box-shadow:0 0 110px 20px rgba(8,11,16,0.85), 0 40px 90px -40px rgba(0,0,0,0.6);
     transform-style:preserve-3d;
     will-change:transform;
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.10),
-      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
-      inset 1px 0 0 rgba(255,255,255,0.03),
-      0 40px 80px -32px rgba(0,0,0,0.65),
-      0 3px 6px rgba(0,0,0,0.35);
-    -webkit-mask-image:radial-gradient(130% 140% at 50% 50%, black 88%, transparent 100%);
-            mask-image:radial-gradient(130% 140% at 50% 50%, black 88%, transparent 100%);
-    transition:box-shadow .4s ease, border-color .4s ease;
+    transition:box-shadow .3s ease, border-color .3s ease;
   }
   .card-inner:hover{
-    border-color:rgba(234,240,245,0.18);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.14),
-      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
-      0 46px 90px -30px rgba(0,0,0,0.72), 0 0 60px -18px rgba(53,214,192,0.16);
+    border-color:var(--line-strong);
+    box-shadow:0 20px 50px rgba(0,0,0,0.35), 0 0 110px 20px rgba(8,11,16,0.85);
   }
   .card-inner > *{ transform:translateZ(28px); }
 
@@ -267,7 +330,6 @@
     position:relative; height:150px; border-radius:14px;
     background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.05), transparent 60%), var(--bg-2);
     border:1px solid var(--line);
-    box-shadow:inset 0 3px 10px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.04);
     display:flex; align-items:center; justify-content:center;
     overflow:hidden;
   }
@@ -287,12 +349,11 @@
   .card:nth-of-type(3){ --accent: var(--violet); }
   .card:nth-of-type(4){ --accent: var(--amber); }
   .card:nth-of-type(5){ --accent: var(--teal); }
-  .card:nth-of-type(6){ --accent: var(--amber); }
-  .card:nth-of-type(7){ --accent: var(--violet); }
 
   @media (max-width:760px){
     .card-inner{ grid-template-columns:1fr; }
-    .card.left, .card.right{ transform:translate(0, 34px); }
+    .card.left .card-slide{ transform:translate(-130vw, 34px) perspective(1200px) rotateY(-16deg); }
+    .card.right .card-slide{ transform:translate(130vw, 34px) perspective(1200px) rotateY(16deg); }
   }
 
   /* ================= FADER LAB ================= */
@@ -305,27 +366,15 @@
   .lab-head p{ color:var(--ink-dim); max-width:560px; margin:0 auto; line-height:1.65; }
 
   .lab-panel{
-    background:
-      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
-      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
-    backdrop-filter: blur(30px) saturate(150%);
-    -webkit-backdrop-filter: blur(30px) saturate(150%);
-    border:1px solid rgba(234,240,245,0.07);
-    border-top-color:rgba(234,240,245,0.14);
-    border-radius:28px;
+    background:radial-gradient(140% 170% at 24% 12%, var(--panel) 0%, var(--panel-2) 45%, var(--bg) 100%);
+    border:1px solid transparent; border-radius:30px;
     padding:clamp(20px,4vw,44px);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.10),
-      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
-      0 40px 80px -32px rgba(0,0,0,0.65), 0 3px 6px rgba(0,0,0,0.35);
-    -webkit-mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
-            mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
+    box-shadow:0 0 110px 20px rgba(8,11,16,0.85), 0 40px 90px -40px rgba(0,0,0,0.6);
   }
 
   .scope{
     width:100%; height:180px; border-radius:14px;
     background:var(--bg-2); border:1px solid var(--line);
-    box-shadow:inset 0 3px 10px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.04);
     margin-bottom:34px; position:relative; overflow:hidden;
   }
   .scope canvas{ width:100%; height:100%; display:block; }
@@ -350,7 +399,6 @@
   .fader-track{
     position:relative; height:8px; border-radius:6px;
     background:var(--bg-2); border:1px solid var(--line);
-    box-shadow:inset 0 2px 5px rgba(0,0,0,0.6);
     cursor:pointer;
   }
   .fader-fill{
@@ -419,224 +467,183 @@
   .lab-log .entry b{ color:var(--ink); font-weight:600; }
   @keyframes log-in{ to{ opacity:1; transform:translateY(0); } }
 
-  /* ================= OUR MODEL ================= */
-  .ourmodel{
-    max-width:1040px; margin:0 auto; padding:4vh 24px 14vh; position:relative;
+  /* ================= ICON RIVER ================= */
+  .river-wrap{
+    position:relative; overflow:hidden;
+    padding:36px 0;
+    background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0));
+    border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+    -webkit-mask-image:linear-gradient(90deg, transparent 0%, black 6%, black 94%, transparent 100%);
+            mask-image:linear-gradient(90deg, transparent 0%, black 6%, black 94%, transparent 100%);
+    /* NOTE: no clip-path here on purpose. A 100%-inset clip-path on the
+       element being watched by IntersectionObserver makes some Chromium
+       versions treat it as having zero rendered area and simply never
+       fire the "now visible" callback — which permanently hides this
+       section behind the classlist toggle below. Opacity alone hides it
+       just as well without breaking the observer, so the clip-path wipe
+       lives only inside the animation (it starts the same way, it just
+       isn't sitting in the resting/unobserved state). */
+    opacity:0;
   }
-  .ourmodel-head{ text-align:center; max-width:620px; margin:0 auto 6vh; }
-  .ourmodel-head .eyebrow{
-    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--amber);
-    letter-spacing:0.04em; margin-bottom:14px; display:block;
+  .river-wrap.in-view{
+    animation:river-sweep-in 1.5s cubic-bezier(.16,.8,.24,1) forwards;
   }
-  .ourmodel-head h2{ font-size:clamp(1.7rem,3.4vw,2.4rem); margin-bottom:14px; }
-  .ourmodel-head p{ color:var(--ink-dim); line-height:1.65; }
-
-  .ourmodel-panel{
-    background:
-      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
-      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
-    backdrop-filter: blur(30px) saturate(150%);
-    -webkit-backdrop-filter: blur(30px) saturate(150%);
-    border:1px solid rgba(234,240,245,0.07);
-    border-top-color:rgba(234,240,245,0.14);
-    border-radius:28px;
-    padding:clamp(22px,4vw,44px);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.10),
-      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
-      0 40px 80px -32px rgba(0,0,0,0.65), 0 3px 6px rgba(0,0,0,0.35);
-    -webkit-mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
-            mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
+  @keyframes river-sweep-in{
+    0%{ -webkit-clip-path:inset(0 100% 0 0); clip-path:inset(0 100% 0 0); opacity:0; }
+    6%{ opacity:1; }
+    100%{ -webkit-clip-path:inset(0 0% 0 0); clip-path:inset(0 0% 0 0); opacity:1; }
   }
-  .ourmodel-flow{
-    display:flex; align-items:stretch; gap:18px; flex-wrap:wrap;
+  @media (prefers-reduced-motion: reduce){
+    .river-wrap{ animation:none !important; opacity:1; clip-path:none; -webkit-clip-path:none; }
   }
-  .ourmodel-step{
-    flex:1 1 220px; min-width:210px;
-    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%), var(--bg-2);
-    border:1px solid var(--line); border-top-color:var(--line-strong); border-radius:16px;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,0.03), inset 0 -12px 20px -18px rgba(0,0,0,0.5);
-    padding:22px 20px;
+  .river-caption{
+    text-align:center; padding:0 24px 22px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-faint); letter-spacing:0.05em;
   }
-  .ourmodel-step h4{ font-size:1.08rem; margin:8px 0 10px; }
-  .ourmodel-step p{ color:var(--ink-dim); font-size:0.92rem; line-height:1.6; margin:0; }
-  .ourmodel-num{
-    font-size:11px; letter-spacing:0.06em; color:var(--amber);
-    display:inline-block; padding:3px 10px; border-radius:20px;
-    border:1px solid rgba(255,180,84,0.35); background:rgba(255,180,84,0.1);
+  .river-row{
+    position:relative; height:42px; margin:12px 0;
+    overflow:hidden;
   }
-  .ourmodel-result{ border-color:rgba(53,214,192,0.35); background:rgba(53,214,192,0.06); }
-  .ourmodel-result .ourmodel-num{ color:var(--teal); border-color:rgba(53,214,192,0.4); background:rgba(53,214,192,0.12); }
-  .ourmodel-op{
-    align-self:center; font-family:'Space Grotesk', sans-serif; font-size:1.6rem;
-    color:var(--ink-faint); flex:0 0 auto; padding:0 2px;
-  }
-  .ourmodel-visual{
-    margin-top:26px; height:110px; border-radius:14px;
-    background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.05), transparent 60%), var(--bg-2);
-    border:1px solid var(--line); overflow:hidden;
-  }
-  .ourmodel-visual canvas{ width:100%; height:100%; display:block; }
-
-  @media (max-width:760px){
-    .ourmodel-op{ transform:rotate(90deg); margin:0 auto; }
-    .ourmodel-flow{ flex-direction:column; }
-  }
-
-  /* ================= SEASON CONTROL CARD ================= */
-  .season-switch{
-    display:flex; flex-wrap:wrap; gap:8px;
-    margin:18px 0 16px;
-  }
-  .season-btn{
-    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.02em;
-    padding:8px 15px; border-radius:20px; cursor:pointer;
-    background:transparent; color:var(--ink-dim);
-    border:1px solid var(--line-strong);
-    transition:background .3s ease, color .3s ease, border-color .3s ease, transform .2s ease;
-  }
-  .season-btn:hover{ transform:translateY(-1px); border-color:var(--ink-faint); color:var(--ink); }
-  .season-btn.active{
-    background:var(--accent, var(--teal));
-    border-color:transparent;
-    color:#04120f;
-  }
-  .season-btn:focus-visible{ outline:2px solid var(--accent, var(--teal)); outline-offset:2px; }
-
-  .season-readout{
-    border-left:2px solid var(--accent, var(--teal));
-    padding:4px 0 4px 16px;
-    margin-bottom:6px;
-    transition:border-color .35s ease;
-  }
-  .season-readout .season-creature{
-    font-size:11.5px; letter-spacing:0.05em; color:var(--accent, var(--teal));
-    display:block; margin-bottom:6px; transition:color .35s ease;
-  }
-  .season-readout p{ margin:0; min-height:4.6em; }
-
-  .season-visual{ position:relative; }
-  .season-icon{
-    position:absolute; top:12px; right:16px;
-    font-size:2.6rem; opacity:0.85; filter:drop-shadow(0 0 18px rgba(0,0,0,0.5));
-    transition:transform .4s cubic-bezier(.2,.8,.3,1), opacity .3s ease;
-    pointer-events:none;
-  }
-
-  /* ================= COMPARISON TABLE ================= */
-  .compare{
-    max-width:1040px; margin:0 auto; padding:6vh 24px 14vh; position:relative;
-  }
-  .compare-head{ text-align:center; max-width:640px; margin:0 auto 6vh; }
-  .compare-head .eyebrow{
-    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--magenta);
-    letter-spacing:0.04em; margin-bottom:14px; display:block;
-  }
-  .compare-head h2{ font-size:clamp(1.7rem,3.4vw,2.4rem); margin-bottom:14px; }
-  .compare-head p{ color:var(--ink-dim); line-height:1.65; }
-
-  .compare-table{
-    border:1px solid rgba(234,240,245,0.07); border-top-color:rgba(234,240,245,0.14);
-    border-radius:28px; overflow:hidden;
-    background:
-      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
-      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
-    backdrop-filter: blur(30px) saturate(150%);
-    -webkit-backdrop-filter: blur(30px) saturate(150%);
-    box-shadow:
-      inset 0 1px 0 rgba(255,255,255,0.10),
-      0 40px 80px -32px rgba(0,0,0,0.65), 0 3px 6px rgba(0,0,0,0.35);
-  }
-  .compare-row{
-    display:grid; grid-template-columns:1fr 1.3fr 1.3fr;
-    border-top:1px solid var(--line);
-    opacity:0; transform:translateY(18px);
-    transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1), background .3s ease;
-  }
-  .compare-row.in-view{ opacity:1; transform:translateY(0); }
-  .compare-row:first-child{ border-top:none; }
-  .compare-row:hover{ background:rgba(255,255,255,0.02); }
-  .compare-cell{ padding:22px clamp(14px,2.4vw,26px); line-height:1.6; font-size:0.94rem; }
-  .compare-cell--label{ color:var(--ink); font-weight:600; display:flex; align-items:center; font-family:'Space Grotesk', sans-serif; font-size:1rem; }
-
-  .compare-pill{
-    display:inline-flex; align-items:center; gap:6px;
-    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:0.07em;
-    padding:4px 10px; border-radius:20px; margin-bottom:10px;
-  }
-  .compare-pill--old{ background:rgba(255,111,156,0.1); color:var(--magenta); border:1px solid rgba(255,111,156,0.32); }
-  .compare-pill--new{ background:rgba(53,214,192,0.14); color:var(--teal); border:1px solid rgba(53,214,192,0.4); }
-
-  .compare-cell--old{
-    border-left:3px dashed rgba(255,111,156,0.32);
-    background:rgba(255,111,156,0.025);
-    color:var(--ink-faint);
-  }
-  .compare-cell--old::before{ content:'✕'; color:rgba(255,111,156,0.85); font-weight:700; margin-right:9px; }
-  .compare-cell--old b{ color:var(--magenta); font-weight:600; }
-
-  .compare-cell--new{
-    border-left:3px solid rgba(53,214,192,0.55);
-    background:rgba(53,214,192,0.05);
-    color:var(--ink);
-    font-weight:450;
-  }
-  .compare-cell--new::before{ content:'✓'; color:var(--teal); font-weight:700; margin-right:9px; }
-  .compare-cell--new b{ color:var(--teal); font-weight:700; }
-
-  .compare-row:hover .compare-cell--new{ background:rgba(53,214,192,0.09); border-left-color:var(--teal); }
-  .compare-row:hover .compare-cell--old{ background:rgba(255,111,156,0.05); }
-
-  .compare-row--head{
-    background:rgba(255,255,255,0.02);
-    position:sticky; top:0; z-index:2;
-  }
-  .compare-row--head .compare-cell{ padding-top:22px; padding-bottom:22px; }
-  .compare-row--head .compare-cell--old,
-  .compare-row--head .compare-cell--new{ background:none; }
-  .compare-row--head .compare-cell--old::before,
-  .compare-row--head .compare-cell--new::before{ content:none; }
-  .compare-row--head h4{ font-family:'Space Grotesk', sans-serif; font-size:1.05rem; margin-bottom:2px; color:var(--ink); }
-  .compare-row--head .sub{ font-size:10.5px; color:var(--ink-faint); letter-spacing:0.02em; display:block; margin-top:4px; }
-  code.mono-code{
-    font-family:'IBM Plex Mono', monospace; font-size:0.85em;
-    background:rgba(255,255,255,0.07); padding:1px 6px; border-radius:5px; color:var(--ink);
-  }
-
-  @media (max-width:760px){
-    .compare-row{ grid-template-columns:1fr; }
-    .compare-cell--old, .compare-cell--new{ border-left:none; border-top:3px dashed rgba(255,111,156,0.32); }
-    .compare-cell--new{ border-top:3px solid rgba(53,214,192,0.55); }
-    .compare-row--head{ position:static; }
-  }
-
-  /* ================= AMBIENT BACKGROUND ================= */
-  .aurora{
-    position:fixed; inset:-15%; z-index:-2; pointer-events:none;
-    background:
-      radial-gradient(32% 26% at 18% 22%, rgba(53,214,192,0.4), transparent 70%),
-      radial-gradient(28% 24% at 82% 12%, rgba(255,111,156,0.32), transparent 70%),
-      radial-gradient(34% 30% at 74% 82%, rgba(143,131,255,0.34), transparent 70%),
-      radial-gradient(26% 22% at 14% 84%, rgba(255,180,84,0.26), transparent 70%);
-    filter:blur(20px) saturate(120%);
-    opacity:0.85;
-    animation:aurora-drift 22s ease-in-out infinite alternate;
+  .river-icon{
+    position:absolute; top:50%; left:0;
+    width:34px; height:34px;
+    opacity:0.55;
     will-change:transform;
   }
-  @keyframes aurora-drift{
-    0%{ transform:translate3d(0,0,0) scale(1) rotate(0deg); }
-    50%{ transform:translate3d(-2.5%,3%,0) scale(1.08) rotate(2deg); }
-    100%{ transform:translate3d(3%,-2%,0) scale(1.03) rotate(-2deg); }
-  }
-  .cursor-glow{
-    position:fixed; inset:0; z-index:0; pointer-events:none;
-    background:radial-gradient(520px circle at var(--mx,50%) var(--my,20%), rgba(53,214,192,0.10), transparent 62%);
-    transition:background .12s ease-out;
-  }
+  .river-icon svg{ width:100%; height:100%; }
 
   @media (prefers-reduced-motion: reduce){
-    .aurora{ animation:none; }
+    .river-row{ display:none; }
   }
+
+  /* ================= SOUND GENERATOR ================= */
+  .genlab{ max-width:820px; margin:0 auto; padding:4vh 24px 10vh; position:relative; }
+  .genlab-head{ text-align:center; margin-bottom:5vh; position:relative; }
+  .genlab-head .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--violet); letter-spacing:0.04em; display:block; margin-bottom:14px; }
+  .genlab-head h2{ font-size:clamp(1.6rem,3.2vw,2.2rem); margin-bottom:14px; }
+  .genlab-head p{ color:var(--ink-dim); max-width:540px; margin:0 auto; line-height:1.65; }
+
+  .genlab-panel{
+    background:radial-gradient(140% 170% at 24% 12%, var(--panel) 0%, var(--panel-2) 45%, var(--bg) 100%);
+    border:1px solid transparent; border-radius:30px;
+    padding:clamp(20px,4vw,38px);
+    box-shadow:0 0 110px 20px rgba(8,11,16,0.85), 0 40px 90px -40px rgba(0,0,0,0.6);
+  }
+  .gen-canvas{ width:100%; height:120px; display:block; border-radius:14px; background:var(--bg-2); border:1px solid var(--line); }
+  .gen-readout{ display:flex; flex-wrap:wrap; gap:12px; margin:22px 0 16px; }
+  .gen-row{
+    flex:1; min-width:150px;
+    display:flex; flex-direction:column; gap:6px;
+    background:var(--bg-2); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px;
+  }
+  .gen-label{ font-size:10.5px; color:var(--ink-faint); letter-spacing:0.04em; }
+  .gen-value{ font-size:1rem; font-weight:600; color:var(--ink); font-family:'Space Grotesk', sans-serif; }
+  .gen-sentence{ color:var(--ink-dim); line-height:1.65; font-size:0.98rem; min-height:3.3em; }
+  .gen-footer{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-top:8px; }
+  .gen-btn{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:0.95rem;
+    color:#04120f; background:linear-gradient(120deg, var(--teal), var(--violet));
+    border:none; border-radius:30px; padding:13px 24px; cursor:pointer;
+    transition:transform .18s ease, box-shadow .18s ease;
+    box-shadow:0 8px 24px rgba(53,214,192,0.25);
+  }
+  .gen-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 30px rgba(53,214,192,0.35); }
+  .gen-btn:active{ transform:translateY(0px) scale(0.98); }
+  .gen-seed{ font-size:11px; color:var(--ink-faint); }
+
+  /* ================= TRUE OR FALSE FACTS ================= */
+  .facts{ max-width:1040px; margin:0 auto; padding:4vh 24px 12vh; position:relative; }
+  .facts-head{ text-align:center; margin-bottom:6vh; position:relative; }
+  .facts-head .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--magenta); letter-spacing:0.04em; display:block; margin-bottom:14px; }
+  .facts-head h2{ font-size:clamp(1.6rem,3.2vw,2.2rem); margin-bottom:14px; }
+  .facts-head p{ color:var(--ink-dim); }
+
+  .facts-grid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:22px;
+  }
+  @media (max-width:860px){ .facts-grid{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:560px){ .facts-grid{ grid-template-columns:1fr; } }
+
+  .fact-card{
+    position:relative; height:258px;
+    perspective:1200px;
+    transition:transform .35s cubic-bezier(.2,.8,.3,1);
+  }
+  .fact-card:hover{ transform:translateY(-6px); }
+  .fact-card-inner{
+    position:relative; width:100%; height:100%;
+    transform-style:preserve-3d;
+    transition:transform .6s cubic-bezier(.3,.9,.3,1);
+  }
+  .fact-card.flipped .fact-card-inner{ transform:rotateY(180deg); }
+
+  .fact-face{
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius:18px; padding:20px;
+    display:flex; flex-direction:column;
+    border:1px solid var(--line);
+    overflow:hidden;
+    transition:border-color .35s ease, box-shadow .35s ease;
+  }
+  .fact-card:hover .fact-face{
+    border-color:var(--line-strong);
+    box-shadow:0 22px 48px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .fact-front{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    justify-content:space-between;
+  }
+  .fact-front .statement{ font-size:0.98rem; line-height:1.55; color:var(--ink); }
+  .fact-front .n{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint); margin-bottom:10px; display:block; }
+  .fact-guess{ display:flex; gap:10px; }
+  .fact-guess button{
+    flex:1; padding:9px 0; border-radius:10px; cursor:pointer;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.03em;
+    border:1px solid var(--line-strong); background:rgba(255,255,255,0.02); color:var(--ink-dim);
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .fact-guess button.opt-true:hover{ border-color:var(--teal); color:var(--teal); }
+  .fact-guess button.opt-false:hover{ border-color:var(--magenta); color:var(--magenta); }
+
+  .fact-back{
+    background:linear-gradient(160deg, var(--panel-2), var(--panel));
+    transform:rotateY(180deg);
+    justify-content:flex-start; gap:8px;
+  }
+  .fact-back .verdict{
+    font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:1rem;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    width:100%; box-sizing:border-box; padding:11px 14px; border-radius:11px;
+    background:rgba(234,240,245,0.06); border:1px solid var(--line-strong);
+  }
+  .fact-back .verdict.correct-true{ color:var(--teal); background:rgba(53,214,192,0.14); border-color:rgba(53,214,192,0.4); }
+  .fact-back .verdict.correct-false{ color:var(--magenta); background:rgba(255,111,156,0.14); border-color:rgba(255,111,156,0.4); }
+  .fact-back .guess-note{ font-size:11.5px; color:var(--ink-faint); }
+  .fact-back .explain{ font-size:0.9rem; line-height:1.55; color:var(--ink-dim); margin-top:4px; }
+  .fact-back .again{
+    margin-top:auto; align-self:flex-start;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint);
+    background:none; border:none; cursor:pointer; padding:0; text-decoration:underline;
+  }
+  .fact-back .again:hover{ color:var(--ink); }
+
+  /* ================= GLOSSARY TOOLTIPS ================= */
+  .term{
+    border-bottom:1px dotted var(--ink-faint);
+    cursor:help; position:relative; color:var(--ink);
+  }
+  .term::after{
+    content:attr(data-tip);
+    position:absolute; left:50%; bottom:135%; transform:translateX(-50%) translateY(4px);
+    width:210px; padding:10px 12px; border-radius:10px;
+    background:var(--panel-2); border:1px solid var(--line-strong);
+    font-family:'Inter', sans-serif; font-size:12px; line-height:1.5; color:var(--ink-dim);
+    box-shadow:0 12px 30px rgba(0,0,0,0.5);
+    opacity:0; pointer-events:none; transition:opacity .18s ease, transform .18s ease;
+    z-index:30; white-space:normal;
+  }
+  .term:hover::after, .term:focus::after{ opacity:1; transform:translateX(-50%) translateY(0); }
 
   /* ================= FOOTER ================= */
   footer{
@@ -655,9 +662,7 @@
 </head>
 <body>
 
-<div class="aurora" id="aurora"></div>
 <div class="grid-bg"></div>
-<div class="cursor-glow" id="cursorGlow"></div>
 <div id="scroll-rail"></div>
 
 <nav>
@@ -669,6 +674,101 @@
 <div class="hero-wrap" id="heroWrap">
   <div class="hero-stick">
     <canvas class="waveform-under" id="heroWave"></canvas>
+    <div class="hero-icons" id="heroIcons" aria-hidden="true">
+
+      <div class="icon-drift" style="left:8%; top:12%; animation-duration:46s; animation-delay:-4s; --drift:36px;">
+      <div class="float-icon" style="animation-duration:8.5s; animation-delay:-1.2s;">
+        <div class="icon-inner" style="--tint:#35d6c0;">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gradNote" x1="0" y1="0" x2="0.25" y2="1">
+                <stop offset="0" stop-color="#ffffff"/>
+                <stop offset="0.4" stop-color="#35d6c0"/>
+                <stop offset="1" stop-color="#0f5850"/>
+              </linearGradient>
+              <clipPath id="clipNote"><rect x="0" y="0" width="24" height="9.5"/></clipPath>
+            </defs>
+            <g stroke="url(#gradNote)" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>
+            </g>
+            <g stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" clip-path="url(#clipNote)">
+              <path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+      </div>
+
+      <div class="icon-drift" style="left:78%; top:10%; animation-duration:58s; animation-delay:-20s; --drift:-30px;">
+      <div class="float-icon" style="animation-duration:10.2s; animation-delay:-3.4s;">
+        <div class="icon-inner" style="--tint:#8f83ff;">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gradPhones" x1="0" y1="0" x2="0.25" y2="1">
+                <stop offset="0" stop-color="#ffffff"/>
+                <stop offset="0.4" stop-color="#8f83ff"/>
+                <stop offset="1" stop-color="#3d3680"/>
+              </linearGradient>
+              <clipPath id="clipPhones"><rect x="0" y="0" width="24" height="9.5"/></clipPath>
+            </defs>
+            <g stroke="url(#gradPhones)" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="1.5" y="14" width="5" height="7" rx="1.5"/><rect x="17.5" y="14" width="5" height="7" rx="1.5"/>
+            </g>
+            <g stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" clip-path="url(#clipPhones)">
+              <path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="1.5" y="14" width="5" height="7" rx="1.5"/><rect x="17.5" y="14" width="5" height="7" rx="1.5"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+      </div>
+
+      <div class="icon-drift" style="left:9%; top:70%; animation-duration:50s; animation-delay:-30s; --drift:28px;">
+      <div class="float-icon" style="animation-duration:7.4s; animation-delay:-4.1s;">
+        <div class="icon-inner" style="--tint:#ffb454;">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gradSpeaker" x1="0" y1="0" x2="0.25" y2="1">
+                <stop offset="0" stop-color="#ffffff"/>
+                <stop offset="0.4" stop-color="#ffb454"/>
+                <stop offset="1" stop-color="#8a5316"/>
+              </linearGradient>
+              <clipPath id="clipSpeaker"><rect x="0" y="0" width="24" height="9.5"/></clipPath>
+            </defs>
+            <g stroke="url(#gradSpeaker)" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 10v4h4l5 5V5L8 10H4z"/><path d="M17 8a5 5 0 0 1 0 8"/><path d="M20 5a9 9 0 0 1 0 14"/>
+            </g>
+            <g stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" clip-path="url(#clipSpeaker)">
+              <path d="M4 10v4h4l5 5V5L8 10H4z"/><path d="M17 8a5 5 0 0 1 0 8"/><path d="M20 5a9 9 0 0 1 0 14"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+      </div>
+
+      <div class="icon-drift" style="left:80%; top:68%; animation-duration:64s; animation-delay:-12s; --drift:-38px;">
+      <div class="float-icon" style="animation-duration:9.1s; animation-delay:-2s;">
+        <div class="icon-inner" style="--tint:#ff6f9c;">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="gradEq" x1="0" y1="0" x2="0.25" y2="1">
+                <stop offset="0" stop-color="#ffffff"/>
+                <stop offset="0.4" stop-color="#ff6f9c"/>
+                <stop offset="1" stop-color="#8f2c4c"/>
+              </linearGradient>
+              <clipPath id="clipEq"><rect x="0" y="0" width="24" height="9.5"/></clipPath>
+            </defs>
+            <g stroke="url(#gradEq)" stroke-width="3.1" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="10" width="3" height="8"/><rect x="9" y="5" width="3" height="18"/><rect x="15" y="12" width="3" height="6"/><rect x="21" y="7" width="3" height="14" transform="translate(-3,0)"/>
+            </g>
+            <g stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" clip-path="url(#clipEq)">
+              <rect x="3" y="10" width="3" height="8"/><rect x="9" y="5" width="3" height="18"/><rect x="15" y="12" width="3" height="6"/><rect x="21" y="7" width="3" height="14" transform="translate(-3,0)"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+      </div>
+
+    </div>
     <div class="hero-shards" id="shards"></div>
     <div class="bubble" id="bubble"></div>
     <div class="hero-title">
@@ -683,7 +783,7 @@
 
 <!-- ================= LEDE ================= -->
 <section class="lede">
-  <p>Most game and film audio is <span>recorded</span> — a sample, played back on cue. Procedural audio is <span>synthesized</span> — built from mathematical building blocks (noise, oscillators, filters, envelopes) every single time it plays, so it can respond to a world that never repeats itself twice.</p>
+  <p>Most game and film audio is <span>recorded</span> — a sample, played back on cue. Procedural audio is <span>synthesized</span> — built from mathematical building blocks (<span class="term" tabindex="0" data-tip="A basic waveform generator — sine, square, or sawtooth — used as a raw building block for pitched sound.">oscillators</span>, <span class="term" tabindex="0" data-tip="Circuitry or code that boosts or cuts certain frequencies, shaping raw noise into a recognizable texture like wind or static.">filters</span>, <span class="term" tabindex="0" data-tip="A shape applied over time — attack, sustain, decay — that gives a sound a beginning, body, and end instead of a flat tone.">envelopes</span>) every single time it plays, so it can respond to a world that never repeats itself twice.</p>
 </section>
 
 <!-- ================= TOPICS ================= -->
@@ -692,8 +792,22 @@
     <span style="left:8%; top:-10%; background:#35d6c0;"></span>
     <span style="right:6%; top:20%; background:#ff6f9c;"></span>
   </div>
-  <span class="eyebrow">SIX DOMAINS</span>
-  <h2>One idea, six different signals</h2>
+  <div class="float-icon bg-icon" style="left:80%; top:10%; animation-duration:8.4s; animation-delay:-2.1s;">
+    <div class="icon-inner" style="--tint:#ffb454;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10v4h4l5 5V5L8 10H4z"/><path d="M17 8a5 5 0 0 1 0 8"/>
+      </svg>
+    </div>
+  </div>
+  <div class="float-icon bg-icon" style="left:22%; top:2%; animation-duration:7.1s; animation-delay:-4.8s;">
+    <div class="icon-inner" style="--tint:#ff6f9c;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>
+      </svg>
+    </div>
+  </div>
+  <span class="eyebrow">FIVE DOMAINS</span>
+  <h2>One idea, five different signals</h2>
   <p>The underlying method is the same — rules instead of recordings — but what feeds those rules, and what comes out the other end, changes completely depending on what's being described.</p>
 </section>
 
@@ -706,7 +820,8 @@
 
 
   <article class="card left">
-   <div class="card-inner">
+   <div class="card-slide">
+    <div class="card-inner">
     <div class="visual"><canvas data-wave="footsteps"></canvas></div>
     <div class="body">
       <span class="tag mono">GROUND &amp; FOOTSTEPS</span>
@@ -719,10 +834,12 @@
       </div>
     </div>
    </div>
+   </div>
   </article>
 
   <article class="card right">
-   <div class="card-inner">
+   <div class="card-slide">
+    <div class="card-inner">
     <div class="visual"><canvas data-wave="weather"></canvas></div>
     <div class="body">
       <span class="tag mono">WEATHER &amp; SEASONS</span>
@@ -735,10 +852,12 @@
       </div>
     </div>
    </div>
+   </div>
   </article>
 
   <article class="card left">
-   <div class="card-inner">
+   <div class="card-slide">
+    <div class="card-inner">
     <div class="visual"><canvas data-wave="emotion"></canvas></div>
     <div class="body">
       <span class="tag mono">EMOTIONAL SCORE</span>
@@ -751,113 +870,93 @@
       </div>
     </div>
    </div>
+   </div>
   </article>
 
   <article class="card right">
-   <div class="card-inner">
+   <div class="card-slide">
+    <div class="card-inner">
     <div class="visual"><canvas data-wave="impact"></canvas></div>
     <div class="body">
       <span class="tag mono">IMPACT &amp; COLLISION</span>
       <h3>Crashes with no source recording</h3>
-      <p>Modal synthesis models an object's own resonant frequencies — a hollow bin, a glass pane, a steel bar — so a collision's force and material generate the impact sound directly from physics, not a sample library.</p>
+      <p><span class="term" tabindex="0" data-tip="Modeling the exact resonant frequencies a physical object rings at when struck, so its sound can be computed from its shape and material instead of recorded.">Modal synthesis</span> models an object's own resonant frequencies — a hollow bin, a glass pane, a steel bar — so a collision's force and material generate the impact sound directly from physics, not a sample library.</p>
       <p>Two collisions of the same object rarely sound identical, because the physical inputs — force, angle, contact point — never are.</p>
       <div class="chip-row" aria-hidden="true">
         <span class="chip">glass</span><span class="chip">metal</span><span class="chip">wood</span><span class="chip">force-mapped</span>
       </div>
     </div>
    </div>
+   </div>
   </article>
 
   <article class="card left">
-   <div class="card-inner">
+   <div class="card-slide">
+    <div class="card-inner">
     <div class="visual"><canvas data-wave="ambience"></canvas></div>
     <div class="body">
       <span class="tag mono">CREATURE &amp; AMBIENCE</span>
       <h3>A world that breathes without looping</h3>
-      <p>Creature calls combine formant synthesis and breath noise, with pitch contours tied to a creature's size and mood. Background ambience layers generative loops of birds, insects, and wind that are recombined so the pattern never audibly repeats.</p>
+      <p>Creature calls combine <span class="term" tabindex="0" data-tip="Shaping noise or a buzzy source with the resonant peaks of a vocal tract, so a synthesized sound reads as a voice or a call rather than pure tone.">formant synthesis</span> and breath noise, with pitch contours tied to a creature's size and mood. Background ambience layers generative loops of birds, insects, and wind that are recombined so the pattern never audibly repeats.</p>
       <div class="chip-row" aria-hidden="true">
         <span class="chip">formants</span><span class="chip">breath noise</span><span class="chip">generative loops</span>
       </div>
     </div>
    </div>
-  </article>
-
-  <article class="card right season-card" id="seasonCard">
-   <div class="card-inner">
-    <div class="visual season-visual">
-      <canvas data-wave="season"></canvas>
-      <div class="season-icon" id="seasonIcon" aria-hidden="true">🐺</div>
-    </div>
-    <div class="body">
-      <span class="tag mono">CREATURE &amp; SEASON CONTROL</span>
-      <h3>One system, four seasons, four voices</h3>
-      <p>The same proximity-and-trigger logic drives every creature in our simulation — only the season changes which animal you meet and what it sounds like. Choose a season to hear how the rule set stays constant while the output completely changes.</p>
-      <div class="season-switch" role="group" aria-label="Choose a season">
-        <button type="button" class="season-btn active" data-season="winter" aria-pressed="true">Winter</button>
-        <button type="button" class="season-btn" data-season="spring" aria-pressed="false">Spring</button>
-        <button type="button" class="season-btn" data-season="summer" aria-pressed="false">Summer</button>
-        <button type="button" class="season-btn" data-season="autumn" aria-pressed="false">Autumn</button>
-      </div>
-      <div class="season-readout" id="seasonReadout">
-        <span class="season-creature mono" id="seasonCreature">WHITE ARCTIC WOLVES</span>
-        <p id="seasonText">Walk within 7.5 meters of one, and it will raise its head and emit a procedural howling curve.</p>
-      </div>
-      <div class="chip-row" aria-hidden="true" id="seasonChips">
-        <span class="chip">7.5m trigger</span><span class="chip">pitch-swept howl</span><span class="chip">snow ambience</span>
-      </div>
-    </div>
    </div>
   </article>
 
 </section>
 
-<!-- ================= COMPARISON ================= -->
-<section class="compare" id="compareSection">
-  <div class="compare-head">
-    <span class="eyebrow mono">HEAD TO HEAD</span>
-    <h2>Recorded loops vs. a generative soundstage</h2>
-    <p>The same question, asked five different ways: what actually changes when audio is generated instead of played back.</p>
+<!-- ================= SOUND GENERATOR ================= -->
+<section class="genlab">
+  <div class="glow-field" aria-hidden="true">
+    <span style="left:6%; top:0%; background:#8f83ff;"></span>
+    <span style="right:0%; bottom:-10%; background:#35d6c0;"></span>
   </div>
-
-  <div class="compare-table" id="compareTable">
-    <div class="compare-row compare-row--head">
-      <div class="compare-cell compare-cell--label mono">VECTOR</div>
-      <div class="compare-cell compare-cell--old">
-        <span class="compare-pill compare-pill--old">✕ LEGACY</span>
-        <h4>Traditional Game Audio</h4>
-        <span class="sub mono">RECORDED <code class="mono-code">.WAV</code> LOOPS</span>
-      </div>
-      <div class="compare-cell compare-cell--new">
-        <span class="compare-pill compare-pill--new">✓ PROCEDURAL</span>
-        <h4>Our Method</h4>
-        <span class="sub mono">AUTONOMOUS SYNTHETIC SOUNDSTAGE</span>
+  <div class="genlab-head">
+    <div class="float-icon bg-icon" style="left:14%; top:0%; animation-duration:7.6s; animation-delay:-3.6s;">
+      <div class="icon-inner" style="--tint:#8f83ff;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12h3l2-6 3 12 3-9 3 6 2-3h4"/>
+        </svg>
       </div>
     </div>
+    <span class="eyebrow">SPIN THE ALGORITHM</span>
+    <h2>Generate a sound that's never existed before</h2>
+    <p>Every real procedural system combines a few independent parameter sets on the fly. Press the button and watch three of them get picked at random — the same trick a game engine runs thousands of times a second.</p>
+  </div>
 
-    <div class="compare-row">
-      <div class="compare-cell compare-cell--label">Storage &amp; Memory Footprint</div>
-      <div class="compare-cell compare-cell--old">Massive. Modern AAA games consume <b>20 GB to 60 GB</b> purely for audio files, samples, and language variations.</div>
-      <div class="compare-cell compare-cell--new"><b>Zero disk footprint.</b> The entire audio engine lives in mathematical algorithms and code (&lt; 500 KB total size).</div>
+  <div class="genlab-panel">
+    <canvas id="genCanvas" class="gen-canvas"></canvas>
+    <div class="gen-readout" id="genReadout">
+      <div class="gen-row"><span class="gen-label mono">SURFACE</span><span class="gen-value" id="genMaterial">—</span></div>
+      <div class="gen-row"><span class="gen-label mono">CONDITION</span><span class="gen-value" id="genWeather">—</span></div>
+      <div class="gen-row"><span class="gen-label mono">MOOD</span><span class="gen-value" id="genMood">—</span></div>
     </div>
-
-    <div class="compare-row">
-      <div class="compare-cell compare-cell--label">Repetition &amp; Auditory Fatigue</div>
-      <div class="compare-cell compare-cell--old">Pre-recorded files repeat the exact same sound byte every 15–30 seconds. Human ears naturally recognize repetitive loops, breaking immersion.</div>
-      <div class="compare-cell compare-cell--new"><b>Infinite variation.</b> Because white noise buffers and harmonic phases evolve over continuous mathematical curves, no two seconds of audio are ever identical.</div>
-    </div>
-
-    <div class="compare-row">
-      <div class="compare-cell compare-cell--label">Micro-Kinematic Reactivity</div>
-      <div class="compare-cell compare-cell--old">Cannot dynamically react to subtle movements. Looking up at the sky or down at your boots plays the exact same ambient track.</div>
-      <div class="compare-cell compare-cell--new"><b>Continuous spatial DSP.</b> Head tilt dynamically opens or closes physical low-pass filters in real time with sub-10ms response.</div>
-    </div>
-
-    <div class="compare-row">
-      <div class="compare-cell compare-cell--label">Emotional &amp; Context Adaptability</div>
-      <div class="compare-cell compare-cell--old">Limited to cross-fading between a few pre-rendered stems (e.g., crossfading between <code class="mono-code">calm.wav</code> and <code class="mono-code">combat.wav</code>), which sounds artificial.</div>
-      <div class="compare-cell compare-cell--new"><b>Zero-latency mood morphing.</b> Natural language and emotional valence directly reshape musical frequencies, wave clipping, and resonance on the fly.</div>
+    <p class="gen-sentence" id="genSentence">Press generate to synthesize a one-of-a-kind combination.</p>
+    <div class="gen-footer">
+      <button class="gen-btn" id="genBtn">⟳ Generate procedural sound</button>
+      <span class="gen-seed mono" id="genSeed">SEED —</span>
     </div>
   </div>
+</section>
+
+<!-- ================= TRUE OR FALSE ================= -->
+<section class="facts">
+  <div class="facts-head">
+    <div class="float-icon bg-icon" style="left:85%; top:6%; animation-duration:8.9s; animation-delay:-1.8s;">
+      <div class="icon-inner" style="--tint:#ff6f9c;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="10" width="3" height="8"/><rect x="9" y="5" width="3" height="18"/><rect x="15" y="12" width="3" height="6"/>
+        </svg>
+      </div>
+    </div>
+    <span class="eyebrow">SOUND OR MYTH</span>
+    <h2>Six claims. Guess before you flip.</h2>
+    <p>Tap a card, pick true or false, then see the answer — with the fact behind it.</p>
+  </div>
+  <div class="facts-grid" id="factsGrid"></div>
 </section>
 
 <!-- ================= FADER LAB ================= -->
@@ -866,6 +965,13 @@
     <div class="glow-field" aria-hidden="true">
       <span style="left:-4%; top:0%; background:#ffb454;"></span>
       <span style="right:0%; bottom:-10%; background:#8f83ff;"></span>
+    </div>
+    <div class="float-icon bg-icon" style="left:10%; top:2%; animation-duration:8.1s; animation-delay:-4.4s;">
+      <div class="icon-inner" style="--tint:#35d6c0;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>
+        </svg>
+      </div>
     </div>
     <span class="eyebrow">TRY IT</span>
     <h2>Build a sound from nothing</h2>
@@ -907,77 +1013,42 @@
   </div>
 </section>
 
-<!-- ================= OUR MODEL ================= -->
-<section class="ourmodel" id="ourModelSection">
-  <div class="glow-field" aria-hidden="true">
-    <span style="left:-6%; top:10%; background:#ffb454;"></span>
-    <span style="right:-8%; bottom:-10%; background:#35d6c0;"></span>
-  </div>
-  <div class="ourmodel-head">
-    <span class="eyebrow mono">IN-HOUSE BUILD</span>
-    <h2>Our Model</h2>
-    <p>Everything above describes the theory. Here's what our team actually built to put it to the test.</p>
-  </div>
-
-  <div class="ourmodel-panel">
-    <div class="ourmodel-flow">
-      <div class="ourmodel-step">
-        <span class="ourmodel-num mono">01</span>
-        <h4>Basic simulation</h4>
-        <p>We built a basic environment simulation from the ground up — terrain, seasons, and creatures already in place, with nothing generating its own sound yet.</p>
-      </div>
-      <div class="ourmodel-op" aria-hidden="true">+</div>
-      <div class="ourmodel-step">
-        <span class="ourmodel-num mono">02</span>
-        <h4>Procedural layer</h4>
-        <p>We then added procedural sound generation directly on top of it, replacing every placeholder recording with a live, rule-driven signal chain.</p>
-      </div>
-      <div class="ourmodel-op" aria-hidden="true">=</div>
-      <div class="ourmodel-step ourmodel-result">
-        <span class="ourmodel-num mono">RESULT</span>
-        <h4>A world that generates its own voice</h4>
-        <p>Every footstep, gust, and creature call in the demo above is that combined system running live — a small, controllable slice of the full idea.</p>
-      </div>
-    </div>
-    <div class="ourmodel-visual"><canvas data-wave="ourmodel"></canvas></div>
-  </div>
-</section>
-
 <footer>
   <div class="glow-field" aria-hidden="true">
     <span style="left:50%; top:-30%; transform:translateX(-50%); background:#35d6c0; width:60vw; height:60vw;"></span>
+  </div>
+  <div class="float-icon bg-icon" style="left:9%; top:20%; animation-duration:8.3s; animation-delay:-2.9s;">
+    <div class="icon-inner" style="--tint:#ffb454;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 15.5a5 5 0 0 1 0-7"/><path d="M15.5 15.5a5 5 0 0 0 0-7"/>
+      </svg>
+    </div>
+  </div>
+  <div class="float-icon bg-icon" style="left:88%; top:55%; animation-duration:7.4s; animation-delay:-5.5s;">
+    <div class="icon-inner" style="--tint:#8f83ff;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="1.5" y="14" width="5" height="7" rx="1.5"/><rect x="17.5" y="14" width="5" height="7" rx="1.5"/>
+      </svg>
+    </div>
   </div>
   <h3>The recording never runs out</h3>
   <p>That's the real promise of procedural sound: not infinite variety for its own sake, but audio that can finally keep up with a world that's being generated, decided, and changed in real time.</p>
   <div class="sig mono">END OF SIGNAL CHAIN — SCROLL TO TOP TO REGENERATE</div>
 </footer>
 
+<!-- ================= ICON RIVER ================= -->
+<div class="river-caption">A HUNDRED SOUNDS, ONE CURRENT — MOVE YOUR CURSOR THROUGH THE FLOW TO PART IT</div>
+<div class="river-wrap" id="riverWrap">
+  <div class="river-row" data-row="0"></div>
+  <div class="river-row" data-row="1"></div>
+  <div class="river-row" data-row="2"></div>
+  <div class="river-row" data-row="3"></div>
+</div>
+
 <script>
 (function(){
 
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ---------- ambient cursor glow ---------- */
-  var cursorGlow = document.getElementById('cursorGlow');
-  var aurora = document.getElementById('aurora');
-  var glowTicking = false;
-  var lastMx = 50, lastMy = 20;
-  function applyGlow(){
-    cursorGlow.style.setProperty('--mx', lastMx + '%');
-    cursorGlow.style.setProperty('--my', lastMy + '%');
-    if(aurora && !reduceMotion){
-      var dx = (lastMx - 50) / 50; // -1..1
-      var dy = (lastMy - 50) / 50;
-      aurora.style.marginLeft = (dx * 14) + 'px';
-      aurora.style.marginTop  = (dy * 14) + 'px';
-    }
-    glowTicking = false;
-  }
-  window.addEventListener('pointermove', function(e){
-    lastMx = (e.clientX / window.innerWidth) * 100;
-    lastMy = (e.clientY / window.innerHeight) * 100;
-    if(!glowTicking){ glowTicking = true; requestAnimationFrame(applyGlow); }
-  }, {passive:true});
 
   /* ---------- top scroll progress rail ---------- */
   var rail = document.getElementById('scroll-rail');
@@ -1089,6 +1160,8 @@
     sizeCanvas(heroWave);
     document.querySelectorAll('[data-wave]').forEach(sizeCanvas);
     sizeCanvas(labScope);
+    var gc = document.getElementById('genCanvas');
+    if(gc) sizeCanvas(gc);
   }
   window.addEventListener('resize', resizeAll);
 
@@ -1125,27 +1198,8 @@
     weather:   {color:'#ff6f9c', kind:'noise'},
     emotion:   {color:'#8f83ff', kind:'smooth'},
     impact:    {color:'#ffb454', kind:'spike'},
-    ambience:  {color:'#35d6c0', kind:'organic'},
-    ourmodel:  {color:'#ffb454', kind:'build'},
-    season:    {color:'#8f83ff', kind:'howl'}
+    ambience:  {color:'#35d6c0', kind:'organic'}
   };
-
-  /* season data drives both the readout and the season card's mini-waveform */
-  var seasonData = {
-    winter: { creature:'WHITE ARCTIC WOLVES', icon:'🐺', accent:'#8f83ff', wave:'howl',
-      text:"Walk within 7.5 meters of one, and it will raise its head and emit a procedural howling curve.",
-      chips:['7.5m trigger','pitch-swept howl','snow ambience'] },
-    spring: { creature:'BLUE SONGBIRDS', icon:'🐦', accent:'#35d6c0', wave:'chirp',
-      text:"Blue songbirds hop through the flower beds and emit rapid frequency-modulated chirps as you walk past.",
-      chips:['FM chirps','hop-triggered','flower bed'] },
-    summer: { creature:'CICADAS', icon:'🦗', accent:'#ffb454', wave:'buzz',
-      text:"Move toward shrubs and tree trunks to hear high-frequency cicadas buzz in spatial 3D audio.",
-      chips:['spatial 3D','high-frequency buzz','shrub &amp; trunk triggers'] },
-    autumn: { creature:'WOODLAND ELKS', icon:'🦌', accent:'#ff6f9c', wave:'bugle',
-      text:"Woodland elks with procedural antler racks roam the amber trees and emit deep resonant bugle calls when approached.",
-      chips:['resonant bugle','proximity trigger','procedural antlers'] }
-  };
-  var currentSeason = 'winter';
   var waveCanvases = [];
   document.querySelectorAll('[data-wave]').forEach(function(c){
     waveCanvases.push({el:c, ctx:c.getContext('2d'), cfg:waveConfigs[c.dataset.wave]});
@@ -1155,14 +1209,6 @@
     var c = entry.el, ctx = entry.ctx, cfg = entry.cfg;
     var w = c.width, h = c.height;
     ctx.clearRect(0,0,w,h);
-
-    // the season card recolors and reshapes itself live based on the selected season
-    if(cfg.kind === 'howl' || cfg.kind === 'chirp' || cfg.kind === 'buzz' || cfg.kind === 'bugle'){
-      var sd = seasonData[currentSeason];
-      cfg.color = sd.accent;
-      cfg.kind = sd.wave;
-    }
-
     ctx.strokeStyle = cfg.color;
     ctx.lineWidth = 2*devicePixelRatio;
     ctx.beginPath();
@@ -1178,28 +1224,6 @@
       } else if(cfg.kind === 'spike'){
         var spike = Math.exp(-Math.pow((p*6 % 6)-3,2)*6);
         y = h/2 - spike*h*0.32*Math.sin(tt*2+p*3);
-      } else if(cfg.kind === 'build'){
-        // a stepped "simulation" baseline with a smooth procedural curve layered over it
-        var step = Math.floor(p*8) % 2 === 0 ? 1 : -1;
-        var base = step * h*0.1;
-        var overlay = Math.sin(p*16 + tt*1.4)*h*0.14;
-        y = h/2 + base*0.5 + overlay;
-      } else if(cfg.kind === 'howl'){
-        // slow rising-then-falling sweep, like a pitch-bent howl
-        var cyc = (p*1.6 + tt*0.12) % 1;
-        var sweep = Math.sin(cyc*Math.PI);
-        y = h/2 - sweep*h*0.3 + Math.sin(p*30+tt*3)*h*0.02;
-      } else if(cfg.kind === 'chirp'){
-        // fast jittery high-frequency bursts
-        var burst = Math.sin(p*70+tt*6);
-        var gate = Math.pow(Math.max(0, Math.sin(p*8+tt*0.8)), 3);
-        y = h/2 + burst*h*0.16*gate + (Math.random()-0.5)*h*0.02;
-      } else if(cfg.kind === 'buzz'){
-        // dense, tight, near-noise high-frequency buzz
-        y = h/2 + Math.sin(p*140+tt*5)*h*0.08 + (Math.random()-0.5)*h*0.06;
-      } else if(cfg.kind === 'bugle'){
-        // slow, deep, resonant tone with a harmonic overtone
-        y = h/2 + Math.sin(p*6+tt*0.8)*h*0.2 + Math.sin(p*18+tt*1.6)*h*0.05;
       } else {
         y = h/2 + Math.sin(p*14+tt*1.2)*h*0.14 + Math.sin(p*33+tt*2.2)*h*0.05;
       }
@@ -1215,69 +1239,54 @@
     requestAnimationFrame(animateCards);
   }
 
-  /* ---------- alternating reveal on scroll ---------- */
+  /* ---------- floating icons (hero + scattered across the page): enlarge on hover, drift away from the cursor ---------- */
+  var iconStates = [];
+  document.querySelectorAll('.icon-inner').forEach(function(el){
+    var state = { el:el, curTx:0, curTy:0, targetTx:0, targetTy:0, curScale:1, targetScale:1 };
+    iconStates.push(state);
+    el.addEventListener('pointerenter', function(){ state.targetScale = 1.55; });
+    el.addEventListener('pointerleave', function(){ state.targetScale = 1; });
+  });
+
+  if(!reduceMotion){
+    window.addEventListener('mousemove', function(e){
+      iconStates.forEach(function(s){
+        var r = s.el.getBoundingClientRect();
+        var cx = r.left + r.width/2, cy = r.top + r.height/2;
+        var dx = cx - e.clientX, dy = cy - e.clientY;
+        var dist = Math.sqrt(dx*dx + dy*dy);
+        var radius = 130;
+        if(dist < radius){
+          var strength = (radius - dist) / radius;
+          var norm = dist === 0 ? {x:1,y:0} : {x:dx/dist, y:dy/dist};
+          s.targetTx = norm.x * strength * 34;
+          s.targetTy = norm.y * strength * 34;
+        } else {
+          s.targetTx = 0; s.targetTy = 0;
+        }
+      });
+    });
+  }
+
+  function animateIcons(){
+    iconStates.forEach(function(s){
+      s.curTx = lerp(s.curTx, s.targetTx, 0.1);
+      s.curTy = lerp(s.curTy, s.targetTy, 0.1);
+      s.curScale = lerp(s.curScale, s.targetScale, 0.15);
+      s.el.style.transform = 'translate3d(' + s.curTx.toFixed(1) + 'px,' + s.curTy.toFixed(1) + 'px,0) scale(' + s.curScale.toFixed(3) + ')';
+    });
+    requestAnimationFrame(animateIcons);
+  }
+  animateIcons();
+
+  /* ---------- alternating reveal on scroll (reverses when scrolling back up) ---------- */
   var cards = document.querySelectorAll('.card');
   var io = new IntersectionObserver(function(entries){
     entries.forEach(function(e){
-      if(e.isIntersecting) e.target.classList.add('in-view');
+      e.target.classList.toggle('in-view', e.isIntersecting);
     });
   }, {threshold:0.22});
   cards.forEach(function(c){ io.observe(c); });
-
-  /* ---------- comparison table reveal ---------- */
-  var compareRows = document.querySelectorAll('.compare-row');
-  var ioCompare = new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if(e.isIntersecting) e.target.classList.add('in-view');
-    });
-  }, {threshold:0.2});
-  compareRows.forEach(function(r){ ioCompare.observe(r); });
-
-  /* ---------- season switcher ---------- */
-  var seasonCard = document.getElementById('seasonCard');
-  var seasonBtns = document.querySelectorAll('.season-btn');
-  var seasonIcon = document.getElementById('seasonIcon');
-  var seasonCreatureEl = document.getElementById('seasonCreature');
-  var seasonTextEl = document.getElementById('seasonText');
-  var seasonChipsEl = document.getElementById('seasonChips');
-  var seasonReadoutEl = document.getElementById('seasonReadout');
-
-  function applySeason(key, animateIcon){
-    var sd = seasonData[key];
-    if(!sd) return;
-    currentSeason = key;
-
-    seasonBtns.forEach(function(b){
-      var on = b.dataset.season === key;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
-
-    if(seasonCard) seasonCard.style.setProperty('--accent', sd.accent);
-    seasonReadoutEl.style.borderColor = sd.accent;
-    seasonCreatureEl.textContent = sd.creature;
-    seasonCreatureEl.style.color = sd.accent;
-    seasonTextEl.textContent = sd.text;
-    seasonIcon.textContent = sd.icon;
-
-    seasonChipsEl.innerHTML = sd.chips.map(function(c){
-      return '<span class="chip">' + c + '</span>';
-    }).join('');
-
-    if(animateIcon && !reduceMotion){
-      seasonIcon.style.transform = 'scale(0.4) rotate(-8deg)';
-      seasonIcon.style.opacity = '0';
-      requestAnimationFrame(function(){
-        seasonIcon.style.transform = 'scale(1) rotate(0deg)';
-        seasonIcon.style.opacity = '0.85';
-      });
-    }
-  }
-
-  seasonBtns.forEach(function(btn){
-    btn.addEventListener('click', function(){ applySeason(btn.dataset.season, true); });
-  });
-  applySeason('winter', false);
 
   /* ---------- cursor-driven card movement: section-wide parallax + per-card tilt ---------- */
   var topicsList = document.getElementById('topicsList');
@@ -1495,11 +1504,355 @@
     requestAnimationFrame(drawScope);
   }
 
+  /* ---------- SOUND GENERATOR: randomizes three parameter sets, like a real procedural engine ---------- */
+  var genCanvas = document.getElementById('genCanvas');
+  var gctx = genCanvas.getContext('2d');
+  var genBtn = document.getElementById('genBtn');
+  var genMaterialEl = document.getElementById('genMaterial');
+  var genWeatherEl = document.getElementById('genWeather');
+  var genMoodEl = document.getElementById('genMood');
+  var genSentenceEl = document.getElementById('genSentence');
+  var genSeedEl = document.getElementById('genSeed');
+
+  var materials = [
+    { name:'Gravel',  color:'#35d6c0', kind:'scatter', desc:'scattered high-frequency grains' },
+    { name:'Wet grass',color:'#35d6c0', kind:'soft',    desc:'damp, low-transient grains' },
+    { name:'Wood',    color:'#ffb454', kind:'pulse',    desc:'a single resonant impulse with a short decay' },
+    { name:'Metal grating', color:'#ffb454', kind:'ring', desc:'a ringing, detuned overtone tail' },
+    { name:'Snow',    color:'#8f83ff', kind:'crunch',   desc:'compressed low-pass grains' },
+    { name:'Shallow water', color:'#8f83ff', kind:'splash', desc:'layered droplet bursts' }
+  ];
+  var weathers = [
+    { name:'Clear', color:'#35d6c0', jitter:0.15 },
+    { name:'Light rain', color:'#8f83ff', jitter:0.5 },
+    { name:'Heavy storm', color:'#ff6f9c', jitter:1.2 },
+    { name:'Snowfall', color:'#eaf0f5', jitter:0.3 },
+    { name:'High wind', color:'#ffb454', jitter:0.85 },
+    { name:'Autumn breeze', color:'#ffb454', jitter:0.4 }
+  ];
+  var moods = [
+    { name:'Calm', color:'#35d6c0', freq:0.01, amp:0.6 },
+    { name:'Tense', color:'#8f83ff', freq:0.03, amp:0.9 },
+    { name:'Triumphant', color:'#ffb454', freq:0.018, amp:1.1 },
+    { name:'Dread', color:'#ff6f9c', freq:0.006, amp:1.3 },
+    { name:'Playful', color:'#35d6c0', freq:0.045, amp:0.7 }
+  ];
+
+  var genState = { material: materials[0], weather: weathers[0], mood: moods[0], seed: 0, active:false };
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function runGenerator(){
+    genState.material = pick(materials);
+    genState.weather = pick(weathers);
+    genState.mood = pick(moods);
+    genState.seed = Math.floor(Math.random()*90000) + 10000;
+    genState.active = true;
+
+    genMaterialEl.textContent = genState.material.name;
+    genWeatherEl.textContent = genState.weather.name;
+    genMoodEl.textContent = genState.mood.name;
+    genSeedEl.textContent = 'SEED #' + genState.seed;
+
+    genSentenceEl.textContent =
+      genState.material.name + ' underfoot, in ' + genState.weather.name.toLowerCase() +
+      ', carrying a ' + genState.mood.name.toLowerCase() + ' undertone — synthesized from ' +
+      genState.material.desc + ', shaped live from three independent parameter sets. Generate again and none of them will match.';
+  }
+
+  genBtn.addEventListener('click', runGenerator);
+
+  var tGen = 0;
+  function drawGenCanvas(){
+    if(!reduceMotion) tGen += 0.025;
+    var w = genCanvas.width, h = genCanvas.height;
+    gctx.clearRect(0,0,w,h);
+
+    if(!genState.active){
+      gctx.strokeStyle = 'rgba(234,240,245,0.12)';
+      gctx.lineWidth = 1.5*devicePixelRatio;
+      gctx.beginPath(); gctx.moveTo(0,h/2); gctx.lineTo(w,h/2); gctx.stroke();
+    } else {
+      var m = genState.material, we = genState.weather, mo = genState.mood;
+      gctx.lineWidth = 2*devicePixelRatio;
+      gctx.strokeStyle = mo.color;
+      gctx.beginPath();
+      for(var x=0; x<=w; x+=3){
+        var p = x/w;
+        var base = Math.sin(p*Math.PI*2*8*mo.freq*60 + tGen*2) * h*0.22*mo.amp*0.4;
+        var jitter = (Math.random()-0.5) * h*0.12 * we.jitter;
+        var y = h/2 + base + jitter;
+        if(x===0) gctx.moveTo(x,y); else gctx.lineTo(x,y);
+      }
+      gctx.stroke();
+
+      gctx.globalAlpha = 0.5;
+      gctx.strokeStyle = m.color;
+      gctx.lineWidth = 1.4*devicePixelRatio;
+      gctx.beginPath();
+      for(var x2=0; x2<=w; x2+=5){
+        var p2 = x2/w;
+        var y2 = h/2 + Math.sin(p2*40 + tGen*3)*h*0.08*Math.pow(Math.sin(p2*6+tGen*0.6),2);
+        if(x2===0) gctx.moveTo(x2,y2); else gctx.lineTo(x2,y2);
+      }
+      gctx.stroke();
+      gctx.globalAlpha = 1;
+    }
+    requestAnimationFrame(drawGenCanvas);
+  }
+
+  /* ---------- TRUE OR FALSE FACT CARDS ---------- */
+  var facts = [
+    {
+      statement: 'No Man\'s Sky generates the ambient soundscape and creature calls of its planets procedurally, rather than from prerecorded samples for each planet.',
+      answer: true,
+      explain: 'Its audio engine builds ambience and creature sounds from generative rules tied to each planet\'s traits, the same way its visuals are generated — so no two worlds share a fixed soundtrack.'
+    },
+    {
+      statement: 'The environmental score in The Legend of Zelda: Breath of the Wild is one fixed recording that never changes during gameplay.',
+      answer: false,
+      explain: 'Its ambient piano score is reactive — sparse motifs fade in and out based on time of day, weather, and nearby events, rather than looping a single fixed track.'
+    },
+    {
+      statement: 'Rain in film and game sound design is often built from layered, filtered noise rather than only real rain recordings.',
+      answer: true,
+      explain: 'Droplet density and surface-specific hits are frequently synthesized from noise layers, since it gives sound designers control a single field recording can\'t offer.'
+    },
+    {
+      statement: 'A footstep synthesis engine can change grain density and pitch to simulate walking on gravel versus wood, using the same underlying system.',
+      answer: true,
+      explain: 'Feeding different material and speed parameters into one grain-based engine is exactly how procedural footstep systems avoid needing a new sample set per surface.'
+    },
+    {
+      statement: 'Procedural audio only became possible after 2010, once computers were fast enough for real-time synthesis.',
+      answer: false,
+      explain: 'Early computer and arcade games synthesized sound live from sound chips in the 1980s — procedural, rule-based audio predates modern game engines by decades.'
+    },
+    {
+      statement: 'Horizontal resequencing composes new melodic phrases on the fly, while vertical remixing layers pre-written instrument stems in and out.',
+      answer: true,
+      explain: 'They\'re the two classic approaches to adaptive scoring: one reshapes the arrangement, the other reshapes the melody itself.'
+    }
+  ];
+
+  var factsGrid = document.getElementById('factsGrid');
+  facts.forEach(function(fact, i){
+    var card = document.createElement('div');
+    card.className = 'fact-card';
+    card.innerHTML =
+      '<div class="fact-card-inner">' +
+        '<div class="fact-face fact-front">' +
+          '<div>' +
+            '<span class="n mono">CLAIM 0' + (i+1) + '</span>' +
+            '<p class="statement">' + fact.statement + '</p>' +
+          '</div>' +
+          '<div class="fact-guess">' +
+            '<button class="opt-true" data-guess="true">True</button>' +
+            '<button class="opt-false" data-guess="false">False</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="fact-face fact-back">' +
+          '<div class="verdict"></div>' +
+          '<div class="guess-note"></div>' +
+          '<p class="explain">' + fact.explain + '</p>' +
+          '<button class="again">↺ flip back</button>' +
+        '</div>' +
+      '</div>';
+    factsGrid.appendChild(card);
+
+    var verdictEl = card.querySelector('.verdict');
+    var guessNoteEl = card.querySelector('.guess-note');
+
+    card.querySelectorAll('.fact-guess button').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var guess = btn.dataset.guess === 'true';
+        var correct = guess === fact.answer;
+        verdictEl.textContent = fact.answer ? 'True' : 'False';
+        verdictEl.className = 'verdict ' + (fact.answer ? 'correct-true' : 'correct-false');
+        guessNoteEl.textContent = correct ? 'You guessed right.' : 'You guessed ' + (guess ? 'true' : 'false') + ' — close look, though.';
+        card.classList.add('flipped');
+      });
+    });
+
+    card.querySelector('.again').addEventListener('click', function(e){
+      e.stopPropagation();
+      card.classList.remove('flipped');
+    });
+  });
+
+  /* ---------- ICON RIVER: N independent rows that always fully tile the
+     row's width (icon count is derived from measured width, so there is
+     never a gap or empty stretch, on any screen size).
+     Icons left of the cursor (within the hovered row) queue up behind a
+     "dam" with fixed spacing; icons right of the cursor keep flowing. ---------- */
+  var riverShapes = [
+    '<path d="M9 18V5l10-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/>', // note
+    '<path d="M3 14v-3a9 9 0 0 1 18 0v3"/><rect x="1.5" y="14" width="5" height="7" rx="1.5"/><rect x="17.5" y="14" width="5" height="7" rx="1.5"/>', // headphones
+    '<path d="M4 10v4h4l5 5V5L8 10H4z"/><path d="M17 8a5 5 0 0 1 0 8"/><path d="M20 5a9 9 0 0 1 0 14"/>', // speaker
+    '<rect x="3" y="10" width="3" height="8"/><rect x="9" y="5" width="3" height="18"/><rect x="15" y="12" width="3" height="6"/><rect x="21" y="7" width="3" height="14" transform="translate(-3,0)"/>', // equalizer
+    '<path d="M2 12h3l2-6 3 12 3-9 3 6 2-3h4"/>', // waveform
+    '<circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><path d="M8.5 15.5a5 5 0 0 1 0-7"/><path d="M15.5 15.5a5 5 0 0 0 0-7"/><path d="M5.5 18.5a9 9 0 0 1 0-13"/><path d="M18.5 18.5a9 9 0 0 0 0-13"/>' // radio waves
+  ];
+  var riverTints = ['#35d6c0', '#8f83ff', '#ff6f9c', '#ffb454'];
+  var ICON_SIZE = 34, SPACING = 76;
+  var riverRows = [];
+  var riverMouse = { x: -9999, y: -9999, active: false };
+
+  // "Stone in the river" interaction: while the cursor sits over a row,
+  // every icon upstream (left) of the cursor's x position freezes in
+  // place — like water piling up against a stone — and vibrates gently.
+  // Frozen icons never move relative to one another, so their spacing
+  // never changes. Icons downstream (right) of the cursor are untouched
+  // and keep flowing at normal speed. The moment the cursor leaves that
+  // row, every icon that was frozen owes a "deficit" (the distance the
+  // current would have carried it while it was stopped); it eases back
+  // up to speed and bleeds that deficit off smoothly until it has fully
+  // rejoined the current position it would have held all along — no
+  // jump, no gap, no overlap, and no visible seam once it's caught up.
+  var ROW_HOVER_PAD = 16;      // px of vertical slack for easier hover targeting
+  var VIBRATE_FREQ_A = 26;     // Hz-ish, primary jitter wobble
+  var VIBRATE_FREQ_B = 41;     // Hz-ish, secondary jitter wobble (keeps it from looking too regular)
+  var VIBRATE_AMP = 1.6;       // px of jitter while held against the stone
+  var CATCHUP_RATE = 4.2;      // per second — how briskly a released icon closes its deficit
+
+  function makeIconEl(className, size, shapeIdx, tintIdx){
+    var el = document.createElement('div');
+    el.className = className;
+    el.style.color = riverTints[tintIdx % riverTints.length];
+    el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + riverShapes[shapeIdx % riverShapes.length] + '</svg>';
+    return el;
+  }
+
+  // enough icons to span this many pixels of row width, plus a buffer so the
+  // wrap point is always safely past the visible edge — never a visible gap
+  function riverCountFor(width){
+    return Math.max(26, Math.ceil(width / SPACING) + 10);
+  }
+
+  function buildRiverRow(rowEl, count, speed, phaseSeed){
+    rowEl.innerHTML = '';
+    var icons = [];
+    for(var i=0; i<count; i++){
+      var el = makeIconEl('river-icon', ICON_SIZE, i + phaseSeed, i + phaseSeed);
+      rowEl.appendChild(el);
+      icons.push({ el:el, x:i*SPACING, phase:Math.random()*Math.PI*2, held:false, deficit:0 });
+    }
+    return { el:rowEl, icons:icons, speed:speed, loopLen:count*SPACING, count:count };
+  }
+
+  var riverSpeeds = [460, 610, 380, 530];
+  function buildRiver(){
+    var rowEls = document.querySelectorAll('.river-row');
+    if(!rowEls.length) return;
+    riverRows = [];
+    var width = (rowEls[0].getBoundingClientRect().width) || window.innerWidth || 1200;
+    var count = riverCountFor(width);
+    rowEls.forEach(function(rowEl, idx){
+      riverRows.push(buildRiverRow(rowEl, count, riverSpeeds[idx % riverSpeeds.length], idx * 2));
+    });
+  }
+  buildRiver();
+
+  // rebuild with more icons if the row ever becomes wider than what's
+  // currently tiled (e.g. rotating a device or resizing a window wider)
+  var riverResizeTimer = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(riverResizeTimer);
+    riverResizeTimer = setTimeout(function(){
+      var rowEls = document.querySelectorAll('.river-row');
+      if(!rowEls.length || !riverRows.length) return;
+      var width = rowEls[0].getBoundingClientRect().width || window.innerWidth;
+      if(riverCountFor(width) > riverRows[0].count){
+        buildRiver();
+      }
+    }, 200);
+  });
+
+  var riverWrapEl = document.getElementById('riverWrap');
+  if(riverWrapEl){
+    if(reduceMotion){
+      riverWrapEl.classList.add('in-view');
+    } else {
+      var ioRiver = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){
+            e.target.classList.add('in-view');
+            ioRiver.unobserve(e.target);
+          }
+        });
+      }, {threshold:0.15});
+      ioRiver.observe(riverWrapEl);
+    }
+  }
+
+  if(!reduceMotion){
+    window.addEventListener('mousemove', function(e){
+      riverMouse.x = e.clientX; riverMouse.y = e.clientY; riverMouse.active = true;
+    });
+    window.addEventListener('mouseleave', function(){ riverMouse.active = false; });
+    window.addEventListener('blur', function(){ riverMouse.active = false; });
+  }
+
+  var riverLast = null;
+  function stepRiver(ts){
+    if(riverLast === null) riverLast = ts;
+    var dt = Math.min((ts - riverLast) / 1000, 0.05);
+    riverLast = ts;
+
+    riverRows.forEach(function(row){
+      var rect = row.el.getBoundingClientRect();
+
+      // is the cursor over *this* row right now, and where (in the row's
+      // own local coordinate space, which matches icon.x directly)?
+      var hot = riverMouse.active &&
+        riverMouse.x >= rect.left && riverMouse.x <= rect.right &&
+        riverMouse.y >= rect.top - ROW_HOVER_PAD && riverMouse.y <= rect.bottom + ROW_HOVER_PAD;
+      var cursorLocalX = hot ? (riverMouse.x - rect.left) : -Infinity;
+
+      row.icons.forEach(function(icon){
+        var jitter = 0;
+
+        if(hot && icon.x < cursorLocalX){
+          // upstream of the stone: hold perfectly still (spacing between
+          // every held icon is therefore locked exactly as it was the
+          // instant it stopped) and let it shiver in place.
+          icon.held = true;
+          icon.deficit += row.speed * dt;
+          jitter = Math.sin(ts / 1000 * VIBRATE_FREQ_A + icon.phase) * VIBRATE_AMP
+                 + Math.sin(ts / 1000 * VIBRATE_FREQ_B + icon.phase * 1.7) * VIBRATE_AMP * 0.4;
+        } else {
+          icon.held = false;
+          if(icon.deficit > 0.05){
+            // ease back up to speed: the closing speed is proportional to
+            // what's left, so it starts brisk and melts smoothly into the
+            // normal current with zero jump, right as the deficit hits 0.
+            var closing = icon.deficit * CATCHUP_RATE;
+            var advance = (row.speed + closing) * dt;
+            if(advance > icon.deficit + row.speed * dt) advance = icon.deficit + row.speed * dt;
+            icon.x += advance;
+            icon.deficit = Math.max(0, icon.deficit - closing * dt);
+          } else {
+            icon.deficit = 0;
+            icon.x += row.speed * dt;
+          }
+        }
+
+        if(icon.x > row.loopLen) icon.x -= row.loopLen;
+
+        icon.el.style.transform = 'translate(' + (icon.x + jitter).toFixed(2) + 'px, -50%)';
+      });
+    });
+
+    requestAnimationFrame(stepRiver);
+  }
+  requestAnimationFrame(stepRiver);
+
   /* ---------- boot ---------- */
   resizeAll();
   drawHeroWave();
   animateCards();
   drawScope();
+  drawGenCanvas();
 
 })();
 </script>
