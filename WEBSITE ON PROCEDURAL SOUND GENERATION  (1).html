@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procedural Sound Generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+  :root{
+    --bg: #080b10;
+    --bg-2: #0c1017;
+    --panel: #0a0e15;
+    --panel-2: #0c1119;
+    --ink: #eaf0f5;
+    --ink-dim: #8c9aa8;
+    --ink-faint: #5b6774;
+    --teal: #35d6c0;
+    --amber: #ffb454;
+    --magenta: #ff6f9c;
+    --violet: #8f83ff;
+    --line: rgba(234,240,245,0.06);
+    --line-strong: rgba(234,240,245,0.13);
+  }
+
+  *{ box-sizing:border-box; }
+
+  html{ scroll-behavior:smooth; }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  ::selection{ background:var(--teal); color:#04120f; }
+
+  h1,h2,h3{
+    font-family:'Space Grotesk', sans-serif;
+    margin:0;
+    font-weight:600;
+    letter-spacing:-0.01em;
+  }
+
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* faint moving grid backdrop, like an audio-editor canvas */
+  .grid-bg{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 10%, transparent 75%);
+            mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, black 10%, transparent 75%);
+    opacity:0.5;
+  }
+
+  /* progress rail */
+  #scroll-rail{
+    position:fixed; top:0; left:0; height:3px; width:0%;
+    background:linear-gradient(90deg, var(--teal), var(--violet), var(--magenta));
+    z-index:100; transition:width .08s linear;
+  }
+
+  nav{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:22px clamp(20px,5vw,56px);
+    pointer-events:none;
+  }
+  nav .brand{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; letter-spacing:0.03em;
+    color:var(--ink-dim); display:flex; align-items:center; gap:10px;
+  }
+  nav .brand .dot{ width:7px; height:7px; border-radius:50%; background:var(--teal); box-shadow:0 0 10px var(--teal); animation:pulse 2.4s ease-in-out infinite; }
+  nav .idx{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--ink-faint); }
+  @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+
+  section{ position:relative; z-index:1; }
+
+  /* ================= HERO ================= */
+  .hero-wrap{ height:260vh; position:relative; }
+  .hero-stick{
+    position:sticky; top:0; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+
+  .bubble{
+    position:relative;
+    width:120px; height:120px;
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 32% 26%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.35) 8%, rgba(255,255,255,0) 20%),
+      radial-gradient(circle at 72% 78%, rgba(255,180,84,0.32) 0%, rgba(255,180,84,0) 42%),
+      radial-gradient(circle at 66% 30%, rgba(255,111,156,0.3) 0%, rgba(255,111,156,0) 45%),
+      radial-gradient(circle at 50% 50%, rgba(143,131,255,0.32), rgba(53,214,192,0.24) 55%, rgba(20,27,37,0.5) 100%);
+    box-shadow:
+      inset 0 0 30px rgba(255,255,255,0.15),
+      inset -12px -12px 40px rgba(0,0,0,0.35),
+      0 0 70px rgba(53,214,192,0.22),
+      0 0 110px rgba(255,111,156,0.12);
+    will-change: transform, opacity;
+  }
+  .bubble::after{
+    content:'';
+    position:absolute; top:14%; left:20%;
+    width:22%; height:14%;
+    border-radius:50%;
+    background:rgba(255,255,255,0.85);
+    filter:blur(2px);
+    transform:rotate(-25deg);
+  }
+  .bubble.pop{
+    animation: bubble-pop 0.62s cubic-bezier(.3,1,.4,1) forwards;
+  }
+  @keyframes bubble-pop{
+    0%{ transform:scale(1); opacity:1; filter:blur(0); }
+    55%{ transform:scale(1.18); opacity:0.9; }
+    75%{ transform:scale(1.55); opacity:0.35; filter:blur(1px); }
+    100%{ transform:scale(2.1); opacity:0; filter:blur(3px); }
+  }
+
+  .hero-title{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:0 24px;
+    pointer-events:none;
+  }
+  .hero-title h1{
+    font-size:clamp(2rem, 6.6vw, 5rem);
+    line-height:1.02;
+    background:linear-gradient(120deg, #fff 10%, var(--teal) 55%, var(--violet) 95%);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    will-change: transform, opacity, filter;
+  }
+
+  .hero-shards{ position:absolute; inset:0; pointer-events:none; }
+  .shard{
+    position:absolute; width:6px; height:6px; border-radius:50%;
+    background:var(--teal); opacity:0;
+    box-shadow:0 0 8px currentColor;
+  }
+
+  .hero-sub{
+    position:absolute; bottom:14%; left:0; right:0;
+    text-align:center; padding:0 24px;
+    opacity:0; transform:translateY(16px);
+    will-change:transform, opacity;
+  }
+  .hero-sub p{
+    max-width:560px; margin:0 auto;
+    font-size:clamp(1rem, 1.6vw, 1.2rem);
+    color:var(--ink-dim); line-height:1.6;
+  }
+  .hero-sub .scroll-cue{
+    margin-top:26px; font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    letter-spacing:0.08em; color:var(--ink-faint);
+  }
+
+  .waveform-under{
+    position:absolute; bottom:0; left:0; right:0; width:100%; height:38%;
+    display:block;
+    opacity:0; pointer-events:none;
+    -webkit-clip-path:inset(0 0 0 100%);
+            clip-path:inset(0 0 0 100%);
+    animation:wave-sweep-in 1.9s cubic-bezier(.16,.8,.24,1) .15s forwards;
+  }
+  @keyframes wave-sweep-in{
+    0%{ -webkit-clip-path:inset(0 0 0 100%); clip-path:inset(0 0 0 100%); opacity:0; }
+    8%{ opacity:0.5; }
+    100%{ -webkit-clip-path:inset(0 0 0 0%); clip-path:inset(0 0 0 0%); opacity:0.5; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .waveform-under{ animation:none; opacity:0.5; clip-path:none; -webkit-clip-path:none; }
+  }
+
+  /* ================= INTRO STRIP ================= */
+  .glow-field{
+    position:absolute; inset:0; z-index:-1; overflow:visible; pointer-events:none;
+  }
+  .glow-field span{
+    position:absolute; width:46vw; height:46vw; border-radius:50%;
+    filter:blur(90px); opacity:0.16;
+  }
+
+  .lede{
+    max-width:760px; margin:0 auto; padding:10vh 24px 16vh;
+    text-align:center;
+  }
+  .lede p{ font-size:clamp(1.05rem,2vw,1.35rem); line-height:1.7; color:var(--ink); }
+  .lede p span{ color:var(--ink-dim); }
+
+  /* ================= TOPICS ================= */
+  .topics-head{
+    max-width:640px; margin:0 auto; padding:4vh 24px 6vh; text-align:center;
+  }
+  .topics-head .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--teal);
+    letter-spacing:0.04em; margin-bottom:14px; display:block;
+  }
+  .topics-head h2{ font-size:clamp(1.7rem,3.4vw,2.4rem); margin-bottom:14px; }
+  .topics-head p{ color:var(--ink-dim); font-size:1.02rem; line-height:1.65; }
+
+  .topics{
+    max-width:1040px; margin:0 auto; padding:2vh 24px 14vh;
+    display:flex; flex-direction:column; gap:64px;
+    position:relative;
+  }
+
+  .card{
+    opacity:0; transition:opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1);
+    perspective:1100px;
+  }
+  .card.left{ transform:translate(-64px, 34px); }
+  .card.right{ transform:translate(64px, 34px); }
+  .card.in-view{ opacity:1; transform:translate(0,0); }
+
+  .card-inner{
+    display:grid; grid-template-columns:1.1fr 1.4fr; gap:36px; align-items:center;
+    background:
+      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
+      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
+    border:1px solid rgba(234,240,245,0.07);
+    border-top-color:rgba(234,240,245,0.14);
+    border-radius:28px;
+    padding:34px clamp(20px,3.4vw,44px);
+    transform-style:preserve-3d;
+    will-change:transform;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
+      inset 1px 0 0 rgba(255,255,255,0.03),
+      0 40px 80px -32px rgba(0,0,0,0.65),
+      0 3px 6px rgba(0,0,0,0.35);
+    -webkit-mask-image:radial-gradient(130% 140% at 50% 50%, black 88%, transparent 100%);
+            mask-image:radial-gradient(130% 140% at 50% 50%, black 88%, transparent 100%);
+    transition:box-shadow .4s ease, border-color .4s ease;
+  }
+  .card-inner:hover{
+    border-color:rgba(234,240,245,0.18);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.14),
+      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
+      0 46px 90px -30px rgba(0,0,0,0.72), 0 0 60px -18px rgba(53,214,192,0.16);
+  }
+  .card-inner > *{ transform:translateZ(28px); }
+
+  .chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .chip{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.02em;
+    padding:5px 11px; border-radius:20px;
+    border:1px solid color-mix(in srgb, var(--accent, var(--teal)) 45%, transparent);
+    color:var(--accent, var(--ink-dim));
+    background:color-mix(in srgb, var(--accent, var(--teal)) 10%, transparent);
+  }
+
+  .card .visual{
+    position:relative; height:150px; border-radius:14px;
+    background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.05), transparent 60%), var(--bg-2);
+    border:1px solid var(--line);
+    box-shadow:inset 0 3px 10px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.04);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .card canvas{ width:100%; height:100%; display:block; }
+
+  .card .body .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    color:var(--accent, var(--teal)); letter-spacing:0.04em;
+    display:inline-block; margin-bottom:10px;
+  }
+  .card .body h3{ font-size:1.5rem; margin-bottom:12px; color:var(--ink); }
+  .card .body p{ color:var(--ink-dim); line-height:1.7; font-size:0.98rem; }
+  .card .body p + p{ margin-top:10px; }
+
+  .card:nth-of-type(1){ --accent: var(--teal); }
+  .card:nth-of-type(2){ --accent: var(--magenta); }
+  .card:nth-of-type(3){ --accent: var(--violet); }
+  .card:nth-of-type(4){ --accent: var(--amber); }
+  .card:nth-of-type(5){ --accent: var(--teal); }
+  .card:nth-of-type(6){ --accent: var(--amber); }
+  .card:nth-of-type(7){ --accent: var(--violet); }
+
+  @media (max-width:760px){
+    .card-inner{ grid-template-columns:1fr; }
+    .card.left, .card.right{ transform:translate(0, 34px); }
+  }
+
+  /* ================= FADER LAB ================= */
+  .lab{
+    max-width:900px; margin:0 auto; padding:6vh 24px 18vh;
+  }
+  .lab-head{ text-align:center; margin-bottom:8vh; position:relative; }
+  .lab-head .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--amber); letter-spacing:0.04em; display:block; margin-bottom:14px; }
+  .lab-head h2{ font-size:clamp(1.7rem,3.4vw,2.4rem); margin-bottom:14px; }
+  .lab-head p{ color:var(--ink-dim); max-width:560px; margin:0 auto; line-height:1.65; }
+
+  .lab-panel{
+    background:
+      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
+      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
+    border:1px solid rgba(234,240,245,0.07);
+    border-top-color:rgba(234,240,245,0.14);
+    border-radius:28px;
+    padding:clamp(20px,4vw,44px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
+      0 40px 80px -32px rgba(0,0,0,0.65), 0 3px 6px rgba(0,0,0,0.35);
+    -webkit-mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
+            mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
+  }
+
+  .scope{
+    width:100%; height:180px; border-radius:14px;
+    background:var(--bg-2); border:1px solid var(--line);
+    box-shadow:inset 0 3px 10px rgba(0,0,0,0.55), inset 0 -1px 0 rgba(255,255,255,0.04);
+    margin-bottom:34px; position:relative; overflow:hidden;
+  }
+  .scope canvas{ width:100%; height:100%; display:block; }
+  .scope .readout{
+    position:absolute; top:12px; left:16px;
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-faint);
+    display:flex; gap:18px;
+  }
+  .scope .readout b{ color:var(--teal); font-weight:500; }
+
+  .fader-row{
+    display:flex; align-items:center; gap:22px;
+  }
+  .fader-labels{
+    display:flex; justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint);
+    margin-top:12px;
+  }
+  .fader-labels span.active{ color:var(--teal); }
+
+  .fader-track-wrap{ position:relative; flex:1; padding:22px 0; }
+  .fader-track{
+    position:relative; height:8px; border-radius:6px;
+    background:var(--bg-2); border:1px solid var(--line);
+    box-shadow:inset 0 2px 5px rgba(0,0,0,0.6);
+    cursor:pointer;
+  }
+  .fader-fill{
+    position:absolute; top:0; left:0; height:100%; border-radius:6px;
+    background:linear-gradient(90deg, var(--teal), var(--violet), var(--magenta));
+    width:0%;
+    box-shadow:0 0 16px rgba(53,214,192,0.35);
+  }
+  .fader-handle{
+    position:absolute; top:50%; left:0%;
+    width:24px; height:24px; border-radius:50%;
+    background:radial-gradient(circle at 32% 28%, #fff, var(--teal) 55%, #0c8b7d 100%);
+    box-shadow:0 0 0 4px rgba(53,214,192,0.15), 0 4px 14px rgba(0,0,0,0.4);
+    transform:translate(-50%,-50%);
+    cursor:grab; touch-action:none;
+  }
+  .fader-handle:active{ cursor:grabbing; }
+  .fader-handle:focus-visible{ outline:2px solid var(--teal); outline-offset:4px; }
+
+  .hint-bubble{
+    position:absolute; top:50%; left:0%;
+    transform:translate(18px, -120%) scale(0.6);
+    min-width:190px; max-width:260px;
+    padding:14px 16px;
+    border-radius:18px 18px 18px 4px;
+    background:
+      radial-gradient(circle at 24% 20%, rgba(255,255,255,0.5), rgba(255,255,255,0) 35%),
+      linear-gradient(160deg, var(--bubble-a, rgba(53,214,192,0.22)), var(--bubble-b, rgba(143,131,255,0.16)));
+    border:1px solid rgba(255,255,255,0.18);
+    backdrop-filter:blur(6px);
+    box-shadow:
+      inset 0 0 20px rgba(255,255,255,0.08),
+      0 10px 30px rgba(0,0,0,0.45);
+    opacity:0; pointer-events:none;
+    transition:opacity .35s ease, transform .35s cubic-bezier(.2,.8,.3,1), background .4s ease;
+    z-index:5;
+  }
+  .hint-bubble::before{
+    content:'';
+    position:absolute; left:-6px; bottom:-2px;
+    width:14px; height:14px; border-radius:50%;
+    background:inherit; border:inherit;
+  }
+  .hint-bubble.show{ opacity:1; transform:translate(18px, -130%) scale(1); }
+  .hint-bubble .layer-tag{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px;
+    color:var(--tag-color, var(--teal)); letter-spacing:0.04em; display:block; margin-bottom:6px;
+  }
+  .hint-bubble p{ margin:0; font-size:12.5px; line-height:1.55; color:#eaf6f3; }
+
+  @media (max-width:640px){
+    .hint-bubble{ min-width:150px; max-width:180px; font-size:11.5px; }
+  }
+
+  .lab-log{
+    margin-top:28px; padding-top:22px; border-top:1px dashed var(--line);
+    display:flex; flex-direction:column; gap:10px; min-height:70px;
+  }
+  .lab-log .entry{
+    display:flex; gap:12px; align-items:baseline;
+    font-size:0.92rem; color:var(--ink-dim); line-height:1.6;
+    opacity:0; transform:translateY(6px);
+    animation:log-in .5s ease forwards;
+  }
+  .lab-log .entry .n{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint); flex-shrink:0; }
+  .lab-log .entry b{ color:var(--ink); font-weight:600; }
+  @keyframes log-in{ to{ opacity:1; transform:translateY(0); } }
+
+  /* ================= OUR MODEL ================= */
+  .ourmodel{
+    max-width:1040px; margin:0 auto; padding:4vh 24px 14vh; position:relative;
+  }
+  .ourmodel-head{ text-align:center; max-width:620px; margin:0 auto 6vh; }
+  .ourmodel-head .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--amber);
+    letter-spacing:0.04em; margin-bottom:14px; display:block;
+  }
+  .ourmodel-head h2{ font-size:clamp(1.7rem,3.4vw,2.4rem); margin-bottom:14px; }
+  .ourmodel-head p{ color:var(--ink-dim); line-height:1.65; }
+
+  .ourmodel-panel{
+    background:
+      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
+      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
+    border:1px solid rgba(234,240,245,0.07);
+    border-top-color:rgba(234,240,245,0.14);
+    border-radius:28px;
+    padding:clamp(22px,4vw,44px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      inset 0 -26px 44px -32px rgba(0,0,0,0.65),
+      0 40px 80px -32px rgba(0,0,0,0.65), 0 3px 6px rgba(0,0,0,0.35);
+    -webkit-mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
+            mask-image:radial-gradient(130% 140% at 50% 50%, black 90%, transparent 100%);
+  }
+  .ourmodel-flow{
+    display:flex; align-items:stretch; gap:18px; flex-wrap:wrap;
+  }
+  .ourmodel-step{
+    flex:1 1 220px; min-width:210px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent 40%), var(--bg-2);
+    border:1px solid var(--line); border-top-color:var(--line-strong); border-radius:16px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.03), inset 0 -12px 20px -18px rgba(0,0,0,0.5);
+    padding:22px 20px;
+  }
+  .ourmodel-step h4{ font-size:1.08rem; margin:8px 0 10px; }
+  .ourmodel-step p{ color:var(--ink-dim); font-size:0.92rem; line-height:1.6; margin:0; }
+  .ourmodel-num{
+    font-size:11px; letter-spacing:0.06em; color:var(--amber);
+    display:inline-block; padding:3px 10px; border-radius:20px;
+    border:1px solid rgba(255,180,84,0.35); background:rgba(255,180,84,0.1);
+  }
+  .ourmodel-result{ border-color:rgba(53,214,192,0.35); background:rgba(53,214,192,0.06); }
+  .ourmodel-result .ourmodel-num{ color:var(--teal); border-color:rgba(53,214,192,0.4); background:rgba(53,214,192,0.12); }
+  .ourmodel-op{
+    align-self:center; font-family:'Space Grotesk', sans-serif; font-size:1.6rem;
+    color:var(--ink-faint); flex:0 0 auto; padding:0 2px;
+  }
+  .ourmodel-visual{
+    margin-top:26px; height:110px; border-radius:14px;
+    background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.05), transparent 60%), var(--bg-2);
+    border:1px solid var(--line); overflow:hidden;
+  }
+  .ourmodel-visual canvas{ width:100%; height:100%; display:block; }
+
+  @media (max-width:760px){
+    .ourmodel-op{ transform:rotate(90deg); margin:0 auto; }
+    .ourmodel-flow{ flex-direction:column; }
+  }
+
+  /* ================= SEASON CONTROL CARD ================= */
+  .season-switch{
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin:18px 0 16px;
+  }
+  .season-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.02em;
+    padding:8px 15px; border-radius:20px; cursor:pointer;
+    background:transparent; color:var(--ink-dim);
+    border:1px solid var(--line-strong);
+    transition:background .3s ease, color .3s ease, border-color .3s ease, transform .2s ease;
+  }
+  .season-btn:hover{ transform:translateY(-1px); border-color:var(--ink-faint); color:var(--ink); }
+  .season-btn.active{
+    background:var(--accent, var(--teal));
+    border-color:transparent;
+    color:#04120f;
+  }
+  .season-btn:focus-visible{ outline:2px solid var(--accent, var(--teal)); outline-offset:2px; }
+
+  .season-readout{
+    border-left:2px solid var(--accent, var(--teal));
+    padding:4px 0 4px 16px;
+    margin-bottom:6px;
+    transition:border-color .35s ease;
+  }
+  .season-readout .season-creature{
+    font-size:11.5px; letter-spacing:0.05em; color:var(--accent, var(--teal));
+    display:block; margin-bottom:6px; transition:color .35s ease;
+  }
+  .season-readout p{ margin:0; min-height:4.6em; }
+
+  .season-visual{ position:relative; }
+  .season-icon{
+    position:absolute; top:12px; right:16px;
+    font-size:2.6rem; opacity:0.85; filter:drop-shadow(0 0 18px rgba(0,0,0,0.5));
+    transition:transform .4s cubic-bezier(.2,.8,.3,1), opacity .3s ease;
+    pointer-events:none;
+  }
+
+  /* ================= COMPARISON TABLE ================= */
+  .compare{
+    max-width:1040px; margin:0 auto; padding:6vh 24px 14vh; position:relative;
+  }
+  .compare-head{ text-align:center; max-width:640px; margin:0 auto 6vh; }
+  .compare-head .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--magenta);
+    letter-spacing:0.04em; margin-bottom:14px; display:block;
+  }
+  .compare-head h2{ font-size:clamp(1.7rem,3.4vw,2.4rem); margin-bottom:14px; }
+  .compare-head p{ color:var(--ink-dim); line-height:1.65; }
+
+  .compare-table{
+    border:1px solid rgba(234,240,245,0.07); border-top-color:rgba(234,240,245,0.14);
+    border-radius:28px; overflow:hidden;
+    background:
+      radial-gradient(140% 120% at 14% -12%, rgba(255,255,255,0.06), transparent 55%),
+      linear-gradient(180deg, rgba(20,26,35,0.66), rgba(7,10,15,0.74));
+    backdrop-filter: blur(30px) saturate(150%);
+    -webkit-backdrop-filter: blur(30px) saturate(150%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.10),
+      0 40px 80px -32px rgba(0,0,0,0.65), 0 3px 6px rgba(0,0,0,0.35);
+  }
+  .compare-row{
+    display:grid; grid-template-columns:1fr 1.3fr 1.3fr;
+    border-top:1px solid var(--line);
+    opacity:0; transform:translateY(18px);
+    transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1), background .3s ease;
+  }
+  .compare-row.in-view{ opacity:1; transform:translateY(0); }
+  .compare-row:first-child{ border-top:none; }
+  .compare-row:hover{ background:rgba(255,255,255,0.02); }
+  .compare-cell{ padding:22px clamp(14px,2.4vw,26px); line-height:1.6; font-size:0.94rem; }
+  .compare-cell--label{ color:var(--ink); font-weight:600; display:flex; align-items:center; font-family:'Space Grotesk', sans-serif; font-size:1rem; }
+
+  .compare-pill{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:0.07em;
+    padding:4px 10px; border-radius:20px; margin-bottom:10px;
+  }
+  .compare-pill--old{ background:rgba(255,111,156,0.1); color:var(--magenta); border:1px solid rgba(255,111,156,0.32); }
+  .compare-pill--new{ background:rgba(53,214,192,0.14); color:var(--teal); border:1px solid rgba(53,214,192,0.4); }
+
+  .compare-cell--old{
+    border-left:3px dashed rgba(255,111,156,0.32);
+    background:rgba(255,111,156,0.025);
+    color:var(--ink-faint);
+  }
+  .compare-cell--old::before{ content:'✕'; color:rgba(255,111,156,0.85); font-weight:700; margin-right:9px; }
+  .compare-cell--old b{ color:var(--magenta); font-weight:600; }
+
+  .compare-cell--new{
+    border-left:3px solid rgba(53,214,192,0.55);
+    background:rgba(53,214,192,0.05);
+    color:var(--ink);
+    font-weight:450;
+  }
+  .compare-cell--new::before{ content:'✓'; color:var(--teal); font-weight:700; margin-right:9px; }
+  .compare-cell--new b{ color:var(--teal); font-weight:700; }
+
+  .compare-row:hover .compare-cell--new{ background:rgba(53,214,192,0.09); border-left-color:var(--teal); }
+  .compare-row:hover .compare-cell--old{ background:rgba(255,111,156,0.05); }
+
+  .compare-row--head{
+    background:rgba(255,255,255,0.02);
+    position:sticky; top:0; z-index:2;
+  }
+  .compare-row--head .compare-cell{ padding-top:22px; padding-bottom:22px; }
+  .compare-row--head .compare-cell--old,
+  .compare-row--head .compare-cell--new{ background:none; }
+  .compare-row--head .compare-cell--old::before,
+  .compare-row--head .compare-cell--new::before{ content:none; }
+  .compare-row--head h4{ font-family:'Space Grotesk', sans-serif; font-size:1.05rem; margin-bottom:2px; color:var(--ink); }
+  .compare-row--head .sub{ font-size:10.5px; color:var(--ink-faint); letter-spacing:0.02em; display:block; margin-top:4px; }
+  code.mono-code{
+    font-family:'IBM Plex Mono', monospace; font-size:0.85em;
+    background:rgba(255,255,255,0.07); padding:1px 6px; border-radius:5px; color:var(--ink);
+  }
+
+  @media (max-width:760px){
+    .compare-row{ grid-template-columns:1fr; }
+    .compare-cell--old, .compare-cell--new{ border-left:none; border-top:3px dashed rgba(255,111,156,0.32); }
+    .compare-cell--new{ border-top:3px solid rgba(53,214,192,0.55); }
+    .compare-row--head{ position:static; }
+  }
+
+  /* ================= AMBIENT BACKGROUND ================= */
+  .aurora{
+    position:fixed; inset:-15%; z-index:-2; pointer-events:none;
+    background:
+      radial-gradient(32% 26% at 18% 22%, rgba(53,214,192,0.4), transparent 70%),
+      radial-gradient(28% 24% at 82% 12%, rgba(255,111,156,0.32), transparent 70%),
+      radial-gradient(34% 30% at 74% 82%, rgba(143,131,255,0.34), transparent 70%),
+      radial-gradient(26% 22% at 14% 84%, rgba(255,180,84,0.26), transparent 70%);
+    filter:blur(20px) saturate(120%);
+    opacity:0.85;
+    animation:aurora-drift 22s ease-in-out infinite alternate;
+    will-change:transform;
+  }
+  @keyframes aurora-drift{
+    0%{ transform:translate3d(0,0,0) scale(1) rotate(0deg); }
+    50%{ transform:translate3d(-2.5%,3%,0) scale(1.08) rotate(2deg); }
+    100%{ transform:translate3d(3%,-2%,0) scale(1.03) rotate(-2deg); }
+  }
+  .cursor-glow{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background:radial-gradient(520px circle at var(--mx,50%) var(--my,20%), rgba(53,214,192,0.10), transparent 62%);
+    transition:background .12s ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .aurora{ animation:none; }
+  }
+
+  /* ================= FOOTER ================= */
+  footer{
+    max-width:900px; margin:0 auto; padding:8vh 24px 12vh; text-align:center;
+    position:relative;
+  }
+  footer h3{ font-size:1.5rem; margin-bottom:14px; }
+  footer p{ color:var(--ink-dim); line-height:1.7; max-width:520px; margin:0 auto; }
+  footer .sig{ margin-top:34px; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-faint); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="aurora" id="aurora"></div>
+<div class="grid-bg"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+<div id="scroll-rail"></div>
+
+<nav>
+  <div class="brand"><span class="dot"></span>procedural.audio</div>
+  <div class="idx mono">01 / SYNTHESIS</div>
+</nav>
+
+<!-- ================= HERO ================= -->
+<div class="hero-wrap" id="heroWrap">
+  <div class="hero-stick">
+    <canvas class="waveform-under" id="heroWave"></canvas>
+    <div class="hero-shards" id="shards"></div>
+    <div class="bubble" id="bubble"></div>
+    <div class="hero-title">
+      <h1 id="heroTitle">Procedural<br>Sound Generation</h1>
+    </div>
+    <div class="hero-sub" id="heroSub">
+      <p>No two footsteps. No two thunderclaps. No two heartbeats.<br>Just rules — and the sound they compose, live.</p>
+      <div class="scroll-cue">SCROLL TO GENERATE ↓</div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= LEDE ================= -->
+<section class="lede">
+  <p>Most game and film audio is <span>recorded</span> — a sample, played back on cue. Procedural audio is <span>synthesized</span> — built from mathematical building blocks (noise, oscillators, filters, envelopes) every single time it plays, so it can respond to a world that never repeats itself twice.</p>
+</section>
+
+<!-- ================= TOPICS ================= -->
+<section class="topics-head">
+  <div class="glow-field" aria-hidden="true">
+    <span style="left:8%; top:-10%; background:#35d6c0;"></span>
+    <span style="right:6%; top:20%; background:#ff6f9c;"></span>
+  </div>
+  <span class="eyebrow">SIX DOMAINS</span>
+  <h2>One idea, six different signals</h2>
+  <p>The underlying method is the same — rules instead of recordings — but what feeds those rules, and what comes out the other end, changes completely depending on what's being described.</p>
+</section>
+
+<section class="topics" id="topicsList">
+  <div class="glow-field" aria-hidden="true">
+    <span style="left:-10%; top:10%; background:#35d6c0;"></span>
+    <span style="right:-10%; top:45%; background:#ff6f9c;"></span>
+    <span style="left:10%; bottom:0%; background:#ffb454;"></span>
+  </div>
+
+
+  <article class="card left">
+   <div class="card-inner">
+    <div class="visual"><canvas data-wave="footsteps"></canvas></div>
+    <div class="body">
+      <span class="tag mono">GROUND &amp; FOOTSTEPS</span>
+      <h3>Terrain that reacts underfoot</h3>
+      <p>Every step is built, not fetched. A footstep engine takes the surface material, the character's weight, and their current speed as inputs, then synthesizes a burst of layered grains — short, randomized fragments of shaped noise — sized and pitched to match what's being walked on.</p>
+      <p>Gravel is many small, high-frequency grains fired in a loose cluster to mimic scattering stones. Snow adds a soft low-pass compression grain underneath, simulating crunch. Wood favors a single resonant impulse with a short decay, like a struck plank, while metal grating adds a ringing overtone tail generated with a lightly detuned oscillator.</p>
+      <p>Speed changes grain density and overlap; a sprint crowds grains closer together and raises their pitch slightly, the way a real footfall gets shorter and sharper. None of this touches a sample library — the same four or five parameters reshape the entire sound.</p>
+      <div class="chip-row" aria-hidden="true">
+        <span class="chip">grass</span><span class="chip">gravel</span><span class="chip">wood</span><span class="chip">metal</span><span class="chip">water</span><span class="chip">snow</span>
+      </div>
+    </div>
+   </div>
+  </article>
+
+  <article class="card right">
+   <div class="card-inner">
+    <div class="visual"><canvas data-wave="weather"></canvas></div>
+    <div class="body">
+      <span class="tag mono">WEATHER &amp; SEASONS</span>
+      <h3>Storms, seasons, and the sound of a changing sky</h3>
+      <p>Rain is rarely one recording — it's droplet density mapped onto layered noise bursts, with a separate, sparser layer for individual drops hitting specific surfaces (leaves, tin roofs, puddles) so a storm over a forest sounds different from one over a city.</p>
+      <p>Wind is pink noise pushed through a filter whose cutoff frequency rises and falls with wind speed, giving it that recognizable "gusting" motion. Thunder is a shaped noise transient with a randomized pitch, delay, and decay tail per strike, so no two claps of thunder are ever identical.</p>
+      <p>Seasons extend the same system over time instead of a single moment: a synthesis engine can slowly shift its own parameters across a calendar — crisper, higher-pitched wind and dry leaf-rustle grains for autumn; damped, muffled reflections and snow-crunch grains for winter; brighter, denser insect and bird-call layers as spring warms into summer.</p>
+      <div class="chip-row" aria-hidden="true">
+        <span class="chip">rain</span><span class="chip">wind</span><span class="chip">thunder</span><span class="chip">snowfall</span><span class="chip">autumn leaves</span><span class="chip">spring thaw</span>
+      </div>
+    </div>
+   </div>
+  </article>
+
+  <article class="card left">
+   <div class="card-inner">
+    <div class="visual"><canvas data-wave="emotion"></canvas></div>
+    <div class="body">
+      <span class="tag mono">EMOTIONAL SCORE</span>
+      <h3>Music that tracks your pulse</h3>
+      <p>Adaptive scores treat emotion as a set of live parameters rather than a fixed timeline: proximity to danger, remaining health, story tension, and pacing all feed a system that adjusts chord voicing, tempo, and instrumentation in real time as those values shift.</p>
+      <p>Two common approaches do this differently. <b>Vertical remixing</b> keeps a piece of music constant in tempo and key but mutes and unmutes instrument layers — strings for calm, percussion and brass stacked in as danger rises — so the transition feels continuous. <b>Horizontal resequencing</b> instead composes short musical phrases procedurally and stitches new ones together on the fly, so the melody itself evolves rather than just its layers.</p>
+      <p>A tense low string drone can be generated by detuning two oscillators slightly against each other; a "heartbeat" cue under fear is often a low sine pulse whose tempo is procedurally tied directly to a danger value. The listener never hears a loop end and another begin — only their situation changing.</p>
+      <div class="chip-row" aria-hidden="true">
+        <span class="chip">tension</span><span class="chip">calm</span><span class="chip">triumph</span><span class="chip">dread</span><span class="chip">vertical remix</span><span class="chip">resequencing</span>
+      </div>
+    </div>
+   </div>
+  </article>
+
+  <article class="card right">
+   <div class="card-inner">
+    <div class="visual"><canvas data-wave="impact"></canvas></div>
+    <div class="body">
+      <span class="tag mono">IMPACT &amp; COLLISION</span>
+      <h3>Crashes with no source recording</h3>
+      <p>Modal synthesis models an object's own resonant frequencies — a hollow bin, a glass pane, a steel bar — so a collision's force and material generate the impact sound directly from physics, not a sample library.</p>
+      <p>Two collisions of the same object rarely sound identical, because the physical inputs — force, angle, contact point — never are.</p>
+      <div class="chip-row" aria-hidden="true">
+        <span class="chip">glass</span><span class="chip">metal</span><span class="chip">wood</span><span class="chip">force-mapped</span>
+      </div>
+    </div>
+   </div>
+  </article>
+
+  <article class="card left">
+   <div class="card-inner">
+    <div class="visual"><canvas data-wave="ambience"></canvas></div>
+    <div class="body">
+      <span class="tag mono">CREATURE &amp; AMBIENCE</span>
+      <h3>A world that breathes without looping</h3>
+      <p>Creature calls combine formant synthesis and breath noise, with pitch contours tied to a creature's size and mood. Background ambience layers generative loops of birds, insects, and wind that are recombined so the pattern never audibly repeats.</p>
+      <div class="chip-row" aria-hidden="true">
+        <span class="chip">formants</span><span class="chip">breath noise</span><span class="chip">generative loops</span>
+      </div>
+    </div>
+   </div>
+  </article>
+
+  <article class="card right season-card" id="seasonCard">
+   <div class="card-inner">
+    <div class="visual season-visual">
+      <canvas data-wave="season"></canvas>
+      <div class="season-icon" id="seasonIcon" aria-hidden="true">🐺</div>
+    </div>
+    <div class="body">
+      <span class="tag mono">CREATURE &amp; SEASON CONTROL</span>
+      <h3>One system, four seasons, four voices</h3>
+      <p>The same proximity-and-trigger logic drives every creature in our simulation — only the season changes which animal you meet and what it sounds like. Choose a season to hear how the rule set stays constant while the output completely changes.</p>
+      <div class="season-switch" role="group" aria-label="Choose a season">
+        <button type="button" class="season-btn active" data-season="winter" aria-pressed="true">Winter</button>
+        <button type="button" class="season-btn" data-season="spring" aria-pressed="false">Spring</button>
+        <button type="button" class="season-btn" data-season="summer" aria-pressed="false">Summer</button>
+        <button type="button" class="season-btn" data-season="autumn" aria-pressed="false">Autumn</button>
+      </div>
+      <div class="season-readout" id="seasonReadout">
+        <span class="season-creature mono" id="seasonCreature">WHITE ARCTIC WOLVES</span>
+        <p id="seasonText">Walk within 7.5 meters of one, and it will raise its head and emit a procedural howling curve.</p>
+      </div>
+      <div class="chip-row" aria-hidden="true" id="seasonChips">
+        <span class="chip">7.5m trigger</span><span class="chip">pitch-swept howl</span><span class="chip">snow ambience</span>
+      </div>
+    </div>
+   </div>
+  </article>
+
+</section>
+
+<!-- ================= COMPARISON ================= -->
+<section class="compare" id="compareSection">
+  <div class="compare-head">
+    <span class="eyebrow mono">HEAD TO HEAD</span>
+    <h2>Recorded loops vs. a generative soundstage</h2>
+    <p>The same question, asked five different ways: what actually changes when audio is generated instead of played back.</p>
+  </div>
+
+  <div class="compare-table" id="compareTable">
+    <div class="compare-row compare-row--head">
+      <div class="compare-cell compare-cell--label mono">VECTOR</div>
+      <div class="compare-cell compare-cell--old">
+        <span class="compare-pill compare-pill--old">✕ LEGACY</span>
+        <h4>Traditional Game Audio</h4>
+        <span class="sub mono">RECORDED <code class="mono-code">.WAV</code> LOOPS</span>
+      </div>
+      <div class="compare-cell compare-cell--new">
+        <span class="compare-pill compare-pill--new">✓ PROCEDURAL</span>
+        <h4>Our Method</h4>
+        <span class="sub mono">AUTONOMOUS SYNTHETIC SOUNDSTAGE</span>
+      </div>
+    </div>
+
+    <div class="compare-row">
+      <div class="compare-cell compare-cell--label">Storage &amp; Memory Footprint</div>
+      <div class="compare-cell compare-cell--old">Massive. Modern AAA games consume <b>20 GB to 60 GB</b> purely for audio files, samples, and language variations.</div>
+      <div class="compare-cell compare-cell--new"><b>Zero disk footprint.</b> The entire audio engine lives in mathematical algorithms and code (&lt; 500 KB total size).</div>
+    </div>
+
+    <div class="compare-row">
+      <div class="compare-cell compare-cell--label">Repetition &amp; Auditory Fatigue</div>
+      <div class="compare-cell compare-cell--old">Pre-recorded files repeat the exact same sound byte every 15–30 seconds. Human ears naturally recognize repetitive loops, breaking immersion.</div>
+      <div class="compare-cell compare-cell--new"><b>Infinite variation.</b> Because white noise buffers and harmonic phases evolve over continuous mathematical curves, no two seconds of audio are ever identical.</div>
+    </div>
+
+    <div class="compare-row">
+      <div class="compare-cell compare-cell--label">Micro-Kinematic Reactivity</div>
+      <div class="compare-cell compare-cell--old">Cannot dynamically react to subtle movements. Looking up at the sky or down at your boots plays the exact same ambient track.</div>
+      <div class="compare-cell compare-cell--new"><b>Continuous spatial DSP.</b> Head tilt dynamically opens or closes physical low-pass filters in real time with sub-10ms response.</div>
+    </div>
+
+    <div class="compare-row">
+      <div class="compare-cell compare-cell--label">Emotional &amp; Context Adaptability</div>
+      <div class="compare-cell compare-cell--old">Limited to cross-fading between a few pre-rendered stems (e.g., crossfading between <code class="mono-code">calm.wav</code> and <code class="mono-code">combat.wav</code>), which sounds artificial.</div>
+      <div class="compare-cell compare-cell--new"><b>Zero-latency mood morphing.</b> Natural language and emotional valence directly reshape musical frequencies, wave clipping, and resonance on the fly.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FADER LAB ================= -->
+<section class="lab">
+  <div class="lab-head">
+    <div class="glow-field" aria-hidden="true">
+      <span style="left:-4%; top:0%; background:#ffb454;"></span>
+      <span style="right:0%; bottom:-10%; background:#8f83ff;"></span>
+    </div>
+    <span class="eyebrow">TRY IT</span>
+    <h2>Build a sound from nothing</h2>
+    <p>Drag the fader. Each stage you cross is a real step in a procedural signal chain — and the scope above shows exactly what that step adds.</p>
+  </div>
+
+  <div class="lab-panel">
+    <div class="scope">
+      <canvas id="labScope"></canvas>
+      <div class="readout mono">
+        <span>LAYERS <b id="layerCount">0</b>/4</span>
+        <span>LEVEL <b id="levelReadout">0%</b></span>
+      </div>
+    </div>
+
+    <div class="fader-row">
+      <div class="fader-track-wrap" id="faderWrap">
+        <div class="hint-bubble" id="hintBubble">
+          <span class="layer-tag mono">SIGNAL</span>
+          <p id="hintText">Drag right to inject the first layer.</p>
+        </div>
+        <div class="fader-track" id="faderTrack">
+          <div class="fader-fill" id="faderFill"></div>
+          <div class="fader-handle" id="faderHandle" role="slider" tabindex="0"
+               aria-label="Procedural signal layer control"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+        </div>
+        <div class="fader-labels mono">
+          <span id="lab0">SILENCE</span>
+          <span id="lab1">NOISE</span>
+          <span id="lab2">FILTER</span>
+          <span id="lab3">ENVELOPE</span>
+          <span id="lab4">MIX</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="lab-log" id="labLog"></div>
+  </div>
+</section>
+
+<!-- ================= OUR MODEL ================= -->
+<section class="ourmodel" id="ourModelSection">
+  <div class="glow-field" aria-hidden="true">
+    <span style="left:-6%; top:10%; background:#ffb454;"></span>
+    <span style="right:-8%; bottom:-10%; background:#35d6c0;"></span>
+  </div>
+  <div class="ourmodel-head">
+    <span class="eyebrow mono">IN-HOUSE BUILD</span>
+    <h2>Our Model</h2>
+    <p>Everything above describes the theory. Here's what our team actually built to put it to the test.</p>
+  </div>
+
+  <div class="ourmodel-panel">
+    <div class="ourmodel-flow">
+      <div class="ourmodel-step">
+        <span class="ourmodel-num mono">01</span>
+        <h4>Basic simulation</h4>
+        <p>We built a basic environment simulation from the ground up — terrain, seasons, and creatures already in place, with nothing generating its own sound yet.</p>
+      </div>
+      <div class="ourmodel-op" aria-hidden="true">+</div>
+      <div class="ourmodel-step">
+        <span class="ourmodel-num mono">02</span>
+        <h4>Procedural layer</h4>
+        <p>We then added procedural sound generation directly on top of it, replacing every placeholder recording with a live, rule-driven signal chain.</p>
+      </div>
+      <div class="ourmodel-op" aria-hidden="true">=</div>
+      <div class="ourmodel-step ourmodel-result">
+        <span class="ourmodel-num mono">RESULT</span>
+        <h4>A world that generates its own voice</h4>
+        <p>Every footstep, gust, and creature call in the demo above is that combined system running live — a small, controllable slice of the full idea.</p>
+      </div>
+    </div>
+    <div class="ourmodel-visual"><canvas data-wave="ourmodel"></canvas></div>
+  </div>
+</section>
+
+<footer>
+  <div class="glow-field" aria-hidden="true">
+    <span style="left:50%; top:-30%; transform:translateX(-50%); background:#35d6c0; width:60vw; height:60vw;"></span>
+  </div>
+  <h3>The recording never runs out</h3>
+  <p>That's the real promise of procedural sound: not infinite variety for its own sake, but audio that can finally keep up with a world that's being generated, decided, and changed in real time.</p>
+  <div class="sig mono">END OF SIGNAL CHAIN — SCROLL TO TOP TO REGENERATE</div>
+</footer>
+
+<script>
+(function(){
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- ambient cursor glow ---------- */
+  var cursorGlow = document.getElementById('cursorGlow');
+  var aurora = document.getElementById('aurora');
+  var glowTicking = false;
+  var lastMx = 50, lastMy = 20;
+  function applyGlow(){
+    cursorGlow.style.setProperty('--mx', lastMx + '%');
+    cursorGlow.style.setProperty('--my', lastMy + '%');
+    if(aurora && !reduceMotion){
+      var dx = (lastMx - 50) / 50; // -1..1
+      var dy = (lastMy - 50) / 50;
+      aurora.style.marginLeft = (dx * 14) + 'px';
+      aurora.style.marginTop  = (dy * 14) + 'px';
+    }
+    glowTicking = false;
+  }
+  window.addEventListener('pointermove', function(e){
+    lastMx = (e.clientX / window.innerWidth) * 100;
+    lastMy = (e.clientY / window.innerHeight) * 100;
+    if(!glowTicking){ glowTicking = true; requestAnimationFrame(applyGlow); }
+  }, {passive:true});
+
+  /* ---------- top scroll progress rail ---------- */
+  var rail = document.getElementById('scroll-rail');
+  function updateRail(){
+    var h = document.documentElement;
+    var scrolled = (h.scrollTop) / (h.scrollHeight - h.clientHeight) * 100;
+    rail.style.width = scrolled + '%';
+  }
+  document.addEventListener('scroll', updateRail, {passive:true});
+  updateRail();
+
+  /* ---------- HERO: scroll-scrubbed bubble + title + pop ---------- */
+  var heroWrap = document.getElementById('heroWrap');
+  var bubble = document.getElementById('bubble');
+  var heroTitle = document.getElementById('heroTitle');
+  var heroSub = document.getElementById('heroSub');
+  var shardsWrap = document.getElementById('shards');
+  var hasPopped = false;
+
+  // build shard particles once, cycling through the full accent palette for a richer pop
+  var shardColors = ['#35d6c0', '#8f83ff', '#ff6f9c', '#ffb454'];
+  var shardEls = [];
+  for(var i=0;i<16;i++){
+    var s = document.createElement('div');
+    s.className = 'shard';
+    var col = shardColors[i % shardColors.length];
+    s.style.background = col;
+    s.style.color = col;
+    shardsWrap.appendChild(s);
+    shardEls.push(s);
+  }
+
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+
+  function popShards(){
+    shardEls.forEach(function(el, idx){
+      var angle = (idx / shardEls.length) * Math.PI * 2;
+      var dist = 70 + Math.random()*90;
+      var dx = Math.cos(angle)*dist;
+      var dy = Math.sin(angle)*dist;
+      el.style.transition = 'none';
+      el.style.opacity = '1';
+      el.style.transform = 'translate(0,0)';
+      el.style.left = '50%';
+      el.style.top = '50%';
+      // force reflow
+      void el.offsetWidth;
+      el.style.transition = 'transform .7s cubic-bezier(.2,.7,.3,1), opacity .7s ease';
+      el.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      el.style.opacity = '0';
+    });
+  }
+
+  function onHeroScroll(){
+    var rect = heroWrap.getBoundingClientRect();
+    var total = heroWrap.offsetHeight - window.innerHeight;
+    var raw = -rect.top / total;
+    var progress = clamp(raw, 0, 1);
+
+    // phase 1: 0 -> 0.55 bubble + title grow
+    var growT = clamp(progress / 0.55, 0, 1);
+    var scale = lerp(0.35, 1, growT);
+    bubble.style.transform = 'scale(' + scale + ')';
+    bubble.style.opacity = String(lerp(0.4, 1, growT));
+
+    heroTitle.style.opacity = String(lerp(0, 1, growT));
+    heroTitle.style.transform = 'scale(' + lerp(0.75, 1, growT) + ')';
+    heroTitle.style.filter = 'blur(' + lerp(6,0,growT) + 'px)';
+
+    // phase 2: 0.55 -> 0.68 POP (trigger once)
+    if(progress > 0.58 && !hasPopped){
+      hasPopped = true;
+      bubble.classList.add('pop');
+      if(!reduceMotion) popShards();
+    }
+    if(progress <= 0.58 && hasPopped){
+      hasPopped = false;
+      bubble.classList.remove('pop');
+    }
+
+    // hide bubble fully once popped stage passed
+    if(progress > 0.7){
+      bubble.style.visibility = 'hidden';
+    } else {
+      bubble.style.visibility = 'visible';
+    }
+
+    // phase 3: 0.62 -> 1 subtitle reveal, title settles smaller
+    var subT = clamp((progress - 0.62) / 0.38, 0, 1);
+    heroSub.style.opacity = String(subT);
+    heroSub.style.transform = 'translateY(' + lerp(16,0,subT) + 'px)';
+
+    var titleShrink = lerp(1, 0.82, subT);
+    heroTitle.style.transform = 'scale(' + titleShrink + ') translateY(' + lerp(0,-40,subT) + 'px)';
+  }
+  document.addEventListener('scroll', onHeroScroll, {passive:true});
+  onHeroScroll();
+
+  /* ---------- hero background waveform (ambient, decorative) ---------- */
+  var heroWave = document.getElementById('heroWave');
+  var hctx = heroWave.getContext('2d');
+  function sizeCanvas(c){
+    var r = c.getBoundingClientRect();
+    c.width = r.width * devicePixelRatio;
+    c.height = r.height * devicePixelRatio;
+  }
+  function resizeAll(){
+    sizeCanvas(heroWave);
+    document.querySelectorAll('[data-wave]').forEach(sizeCanvas);
+    sizeCanvas(labScope);
+  }
+  window.addEventListener('resize', resizeAll);
+
+  var t0 = 0;
+  function drawHeroWave(){
+    if(!reduceMotion){ t0 += 0.012; }
+    var w = heroWave.width, h = heroWave.height;
+    hctx.clearRect(0,0,w,h);
+    var grad = hctx.createLinearGradient(0,0,w,0);
+    grad.addColorStop(0,'rgba(53,214,192,0.5)');
+    grad.addColorStop(0.5,'rgba(143,131,255,0.5)');
+    grad.addColorStop(1,'rgba(255,111,156,0.5)');
+    hctx.strokeStyle = grad;
+    hctx.lineWidth = 2*devicePixelRatio;
+    for(var line=0; line<3; line++){
+      hctx.beginPath();
+      var amp = h*0.06*(1-line*0.25);
+      var freq = 0.006 + line*0.002;
+      for(var x=0; x<=w; x+=4){
+        var y = h*0.5 + Math.sin(x*freq + t0*(1+line*0.4)) * amp
+               + Math.sin(x*freq*2.3 + t0*1.7) * amp*0.3;
+        if(x===0) hctx.moveTo(x,y); else hctx.lineTo(x,y);
+      }
+      hctx.globalAlpha = 0.5 - line*0.12;
+      hctx.stroke();
+    }
+    hctx.globalAlpha = 1;
+    requestAnimationFrame(drawHeroWave);
+  }
+
+  /* ---------- topic card mini waveforms ---------- */
+  var waveConfigs = {
+    footsteps: {color:'#35d6c0', kind:'pulse'},
+    weather:   {color:'#ff6f9c', kind:'noise'},
+    emotion:   {color:'#8f83ff', kind:'smooth'},
+    impact:    {color:'#ffb454', kind:'spike'},
+    ambience:  {color:'#35d6c0', kind:'organic'},
+    ourmodel:  {color:'#ffb454', kind:'build'},
+    season:    {color:'#8f83ff', kind:'howl'}
+  };
+
+  /* season data drives both the readout and the season card's mini-waveform */
+  var seasonData = {
+    winter: { creature:'WHITE ARCTIC WOLVES', icon:'🐺', accent:'#8f83ff', wave:'howl',
+      text:"Walk within 7.5 meters of one, and it will raise its head and emit a procedural howling curve.",
+      chips:['7.5m trigger','pitch-swept howl','snow ambience'] },
+    spring: { creature:'BLUE SONGBIRDS', icon:'🐦', accent:'#35d6c0', wave:'chirp',
+      text:"Blue songbirds hop through the flower beds and emit rapid frequency-modulated chirps as you walk past.",
+      chips:['FM chirps','hop-triggered','flower bed'] },
+    summer: { creature:'CICADAS', icon:'🦗', accent:'#ffb454', wave:'buzz',
+      text:"Move toward shrubs and tree trunks to hear high-frequency cicadas buzz in spatial 3D audio.",
+      chips:['spatial 3D','high-frequency buzz','shrub &amp; trunk triggers'] },
+    autumn: { creature:'WOODLAND ELKS', icon:'🦌', accent:'#ff6f9c', wave:'bugle',
+      text:"Woodland elks with procedural antler racks roam the amber trees and emit deep resonant bugle calls when approached.",
+      chips:['resonant bugle','proximity trigger','procedural antlers'] }
+  };
+  var currentSeason = 'winter';
+  var waveCanvases = [];
+  document.querySelectorAll('[data-wave]').forEach(function(c){
+    waveCanvases.push({el:c, ctx:c.getContext('2d'), cfg:waveConfigs[c.dataset.wave]});
+  });
+
+  function drawCardWave(entry, tt){
+    var c = entry.el, ctx = entry.ctx, cfg = entry.cfg;
+    var w = c.width, h = c.height;
+    ctx.clearRect(0,0,w,h);
+
+    // the season card recolors and reshapes itself live based on the selected season
+    if(cfg.kind === 'howl' || cfg.kind === 'chirp' || cfg.kind === 'buzz' || cfg.kind === 'bugle'){
+      var sd = seasonData[currentSeason];
+      cfg.color = sd.accent;
+      cfg.kind = sd.wave;
+    }
+
+    ctx.strokeStyle = cfg.color;
+    ctx.lineWidth = 2*devicePixelRatio;
+    ctx.beginPath();
+    for(var x=0; x<=w; x+=3){
+      var p = x/w;
+      var y;
+      if(cfg.kind === 'pulse'){
+        y = h/2 + Math.sin(p*40 + tt*2)*h*0.08*Math.pow(Math.sin(p*6+tt*0.5),2);
+      } else if(cfg.kind === 'noise'){
+        y = h/2 + (Math.sin(p*90+tt*3) + (Math.random()-0.5)*1.4)*h*0.09;
+      } else if(cfg.kind === 'smooth'){
+        y = h/2 + Math.sin(p*10 + tt)*h*0.18 + Math.sin(p*3+tt*0.6)*h*0.08;
+      } else if(cfg.kind === 'spike'){
+        var spike = Math.exp(-Math.pow((p*6 % 6)-3,2)*6);
+        y = h/2 - spike*h*0.32*Math.sin(tt*2+p*3);
+      } else if(cfg.kind === 'build'){
+        // a stepped "simulation" baseline with a smooth procedural curve layered over it
+        var step = Math.floor(p*8) % 2 === 0 ? 1 : -1;
+        var base = step * h*0.1;
+        var overlay = Math.sin(p*16 + tt*1.4)*h*0.14;
+        y = h/2 + base*0.5 + overlay;
+      } else if(cfg.kind === 'howl'){
+        // slow rising-then-falling sweep, like a pitch-bent howl
+        var cyc = (p*1.6 + tt*0.12) % 1;
+        var sweep = Math.sin(cyc*Math.PI);
+        y = h/2 - sweep*h*0.3 + Math.sin(p*30+tt*3)*h*0.02;
+      } else if(cfg.kind === 'chirp'){
+        // fast jittery high-frequency bursts
+        var burst = Math.sin(p*70+tt*6);
+        var gate = Math.pow(Math.max(0, Math.sin(p*8+tt*0.8)), 3);
+        y = h/2 + burst*h*0.16*gate + (Math.random()-0.5)*h*0.02;
+      } else if(cfg.kind === 'buzz'){
+        // dense, tight, near-noise high-frequency buzz
+        y = h/2 + Math.sin(p*140+tt*5)*h*0.08 + (Math.random()-0.5)*h*0.06;
+      } else if(cfg.kind === 'bugle'){
+        // slow, deep, resonant tone with a harmonic overtone
+        y = h/2 + Math.sin(p*6+tt*0.8)*h*0.2 + Math.sin(p*18+tt*1.6)*h*0.05;
+      } else {
+        y = h/2 + Math.sin(p*14+tt*1.2)*h*0.14 + Math.sin(p*33+tt*2.2)*h*0.05;
+      }
+      if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+
+  var t1 = 0;
+  function animateCards(){
+    if(!reduceMotion) t1 += 0.02;
+    waveCanvases.forEach(function(entry){ drawCardWave(entry, t1); });
+    requestAnimationFrame(animateCards);
+  }
+
+  /* ---------- alternating reveal on scroll ---------- */
+  var cards = document.querySelectorAll('.card');
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting) e.target.classList.add('in-view');
+    });
+  }, {threshold:0.22});
+  cards.forEach(function(c){ io.observe(c); });
+
+  /* ---------- comparison table reveal ---------- */
+  var compareRows = document.querySelectorAll('.compare-row');
+  var ioCompare = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting) e.target.classList.add('in-view');
+    });
+  }, {threshold:0.2});
+  compareRows.forEach(function(r){ ioCompare.observe(r); });
+
+  /* ---------- season switcher ---------- */
+  var seasonCard = document.getElementById('seasonCard');
+  var seasonBtns = document.querySelectorAll('.season-btn');
+  var seasonIcon = document.getElementById('seasonIcon');
+  var seasonCreatureEl = document.getElementById('seasonCreature');
+  var seasonTextEl = document.getElementById('seasonText');
+  var seasonChipsEl = document.getElementById('seasonChips');
+  var seasonReadoutEl = document.getElementById('seasonReadout');
+
+  function applySeason(key, animateIcon){
+    var sd = seasonData[key];
+    if(!sd) return;
+    currentSeason = key;
+
+    seasonBtns.forEach(function(b){
+      var on = b.dataset.season === key;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    if(seasonCard) seasonCard.style.setProperty('--accent', sd.accent);
+    seasonReadoutEl.style.borderColor = sd.accent;
+    seasonCreatureEl.textContent = sd.creature;
+    seasonCreatureEl.style.color = sd.accent;
+    seasonTextEl.textContent = sd.text;
+    seasonIcon.textContent = sd.icon;
+
+    seasonChipsEl.innerHTML = sd.chips.map(function(c){
+      return '<span class="chip">' + c + '</span>';
+    }).join('');
+
+    if(animateIcon && !reduceMotion){
+      seasonIcon.style.transform = 'scale(0.4) rotate(-8deg)';
+      seasonIcon.style.opacity = '0';
+      requestAnimationFrame(function(){
+        seasonIcon.style.transform = 'scale(1) rotate(0deg)';
+        seasonIcon.style.opacity = '0.85';
+      });
+    }
+  }
+
+  seasonBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){ applySeason(btn.dataset.season, true); });
+  });
+  applySeason('winter', false);
+
+  /* ---------- cursor-driven card movement: section-wide parallax + per-card tilt ---------- */
+  var topicsList = document.getElementById('topicsList');
+  var cardStates = [];
+  cards.forEach(function(card, idx){
+    var inner = card.querySelector('.card-inner');
+    if(!inner) return;
+    // alternate depth so cards drift by different amounts — makes the motion feel spatial, not uniform
+    var depth = (idx % 2 === 0 ? 1 : -1) * (16 + (idx % 3) * 6);
+    var state = {
+      el: inner,
+      depth: depth,
+      curTx:0, curTy:0, targetTx:0, targetTy:0,
+      curRx:0, curRy:0, targetRx:0, targetRy:0
+    };
+    cardStates.push(state);
+
+    // per-card tilt: follows the cursor while it's over this specific card
+    inner.addEventListener('mousemove', function(e){
+      if(reduceMotion) return;
+      var r = inner.getBoundingClientRect();
+      var px = (e.clientX - r.left) / r.width - 0.5;   // -0.5 .. 0.5
+      var py = (e.clientY - r.top) / r.height - 0.5;
+      state.targetRy = px * 14;   // rotateY from horizontal position
+      state.targetRx = -py * 10;  // rotateX from vertical position
+    });
+    inner.addEventListener('mouseleave', function(){
+      state.targetRx = 0; state.targetRy = 0;
+    });
+  });
+
+  if(topicsList && !reduceMotion){
+    topicsList.addEventListener('mousemove', function(e){
+      var r = topicsList.getBoundingClientRect();
+      var cx = r.left + r.width/2;
+      var cy = r.top + r.height/2;
+      var nx = clamp((e.clientX - cx) / (r.width/2), -1, 1);
+      var ny = clamp((e.clientY - cy) / (r.height/2), -1, 1);
+      cardStates.forEach(function(s){
+        s.targetTx = nx * s.depth;
+        s.targetTy = ny * (s.depth * 0.4);
+      });
+    });
+    topicsList.addEventListener('mouseleave', function(){
+      cardStates.forEach(function(s){ s.targetTx = 0; s.targetTy = 0; });
+    });
+  }
+
+  function animateCardMotion(){
+    cardStates.forEach(function(s){
+      s.curTx = lerp(s.curTx, s.targetTx, 0.08);
+      s.curTy = lerp(s.curTy, s.targetTy, 0.08);
+      s.curRx = lerp(s.curRx, s.targetRx, 0.12);
+      s.curRy = lerp(s.curRy, s.targetRy, 0.12);
+      s.el.style.transform =
+        'translate3d(' + s.curTx.toFixed(2) + 'px,' + s.curTy.toFixed(2) + 'px,0) ' +
+        'rotateX(' + s.curRx.toFixed(2) + 'deg) rotateY(' + s.curRy.toFixed(2) + 'deg)';
+    });
+    requestAnimationFrame(animateCardMotion);
+  }
+  animateCardMotion();
+
+  /* ---------- FADER LAB ---------- */
+  var faderTrack = document.getElementById('faderTrack');
+  var faderFill = document.getElementById('faderFill');
+  var faderHandle = document.getElementById('faderHandle');
+  var hintBubble = document.getElementById('hintBubble');
+  var hintText = document.getElementById('hintText');
+  var levelReadout = document.getElementById('levelReadout');
+  var layerCountEl = document.getElementById('layerCount');
+  var labLog = document.getElementById('labLog');
+  var labScope = document.getElementById('labScope');
+  var sctx = labScope.getContext('2d');
+
+  var stages = [
+    { max:1,  tag:'SIGNAL',    text:'Drag right to inject the first layer.', log:null, c1:'rgba(53,214,192,0.22)', c2:'rgba(143,131,255,0.16)', tc:'#35d6c0' },
+    { max:25, tag:'NOISE',     text:'White noise: unfiltered chaos, the raw material every procedural sound starts from.', log:'A raw <b>noise source</b> is generated — pure randomness, no character yet.', c1:'rgba(53,214,192,0.38)', c2:'rgba(53,214,192,0.1)', tc:'#35d6c0' },
+    { max:50, tag:'FILTER',    text:'A filter carves that noise into a shape — this is where "wind" or "static" starts to have a color.', log:'A <b>filter</b> shapes the noise, giving it a recognizable timbre.', c1:'rgba(143,131,255,0.4)', c2:'rgba(143,131,255,0.1)', tc:'#8f83ff' },
+    { max:75, tag:'ENVELOPE',  text:'An envelope gives the sound a beginning, a body, and an end — instead of a flat, endless tone.', log:'An <b>envelope</b> is applied, shaping attack, sustain, and decay over time.', c1:'rgba(255,111,156,0.4)', c2:'rgba(255,111,156,0.1)', tc:'#ff6f9c' },
+    { max:101,tag:'MIX',       text:'Randomized parameters are layered into the final mix — so this exact combination will likely never repeat.', log:'Layers are combined into a final <b>mix</b> — a sound generated, not played back.', c1:'rgba(255,180,84,0.42)', c2:'rgba(255,111,156,0.14)', tc:'#ffb454' }
+  ];
+
+  var value = 0;
+  var lastStageIdx = -1;
+  var dragging = false;
+
+  function stageForValue(v){
+    for(var i=0;i<stages.length;i++){ if(v <= stages[i].max) return i; }
+    return stages.length-1;
+  }
+
+  function addLog(html){
+    var row = document.createElement('div');
+    row.className = 'entry';
+    row.innerHTML = '<span class="n mono">›</span><span>' + html + '</span>';
+    labLog.appendChild(row);
+    while(labLog.children.length > 4){ labLog.removeChild(labLog.firstChild); }
+  }
+
+  function updateFaderVisual(v){
+    faderFill.style.width = v + '%';
+    faderHandle.style.left = v + '%';
+    hintBubble.style.left = v + '%';
+    faderHandle.setAttribute('aria-valuenow', Math.round(v));
+    levelReadout.textContent = Math.round(v) + '%';
+
+    var idx = stageForValue(v);
+    layerCountEl.textContent = String(idx);
+
+    var stage = stages[idx];
+    hintText.textContent = stage.text;
+    hintBubble.querySelector('.layer-tag').textContent = stage.tag;
+    hintBubble.style.setProperty('--bubble-a', stage.c1);
+    hintBubble.style.setProperty('--bubble-b', stage.c2);
+    hintBubble.style.setProperty('--tag-color', stage.tc);
+
+    // scale bubble slightly with level for a "filling up" feel
+    var bubbleScale = 0.75 + (v/100)*0.4;
+    if(v > 2){
+      hintBubble.classList.add('show');
+      hintBubble.style.transform = 'translate(18px, -130%) scale(' + bubbleScale + ')';
+    } else {
+      hintBubble.classList.remove('show');
+    }
+
+    // update mono labels highlight
+    ['lab0','lab1','lab2','lab3','lab4'].forEach(function(id, i){
+      document.getElementById(id).classList.toggle('active', i === idx);
+    });
+
+    if(idx !== lastStageIdx){
+      lastStageIdx = idx;
+      if(stage.log) addLog(stage.log);
+    }
+  }
+
+  function setFromClientX(clientX){
+    var rect = faderTrack.getBoundingClientRect();
+    var pct = clamp((clientX - rect.left) / rect.width, 0, 1) * 100;
+    value = pct;
+    updateFaderVisual(value);
+  }
+
+  faderHandle.addEventListener('pointerdown', function(e){
+    dragging = true;
+    faderHandle.setPointerCapture(e.pointerId);
+  });
+  window.addEventListener('pointermove', function(e){
+    if(dragging) setFromClientX(e.clientX);
+  });
+  window.addEventListener('pointerup', function(){ dragging = false; });
+
+  faderTrack.addEventListener('pointerdown', function(e){
+    setFromClientX(e.clientX);
+    dragging = true;
+  });
+
+  // hover-driven control: moving the cursor across the bar updates the level directly,
+  // no click or drag required (drag above still works for touch)
+  faderTrack.addEventListener('mousemove', function(e){
+    setFromClientX(e.clientX);
+  });
+  faderTrack.addEventListener('mouseenter', function(e){
+    setFromClientX(e.clientX);
+  });
+
+  faderHandle.addEventListener('keydown', function(e){
+    var step = 4;
+    if(e.key === 'ArrowRight' || e.key === 'ArrowUp'){ value = clamp(value+step,0,100); updateFaderVisual(value); e.preventDefault(); }
+    if(e.key === 'ArrowLeft' || e.key === 'ArrowDown'){ value = clamp(value-step,0,100); updateFaderVisual(value); e.preventDefault(); }
+    if(e.key === 'Home'){ value = 0; updateFaderVisual(value); }
+    if(e.key === 'End'){ value = 100; updateFaderVisual(value); }
+  });
+
+  updateFaderVisual(0);
+
+  /* ---------- oscilloscope in fader lab, complexity tied to `value` ---------- */
+  var t2 = 0;
+  function drawScope(){
+    if(!reduceMotion) t2 += 0.03;
+    var w = labScope.width, h = labScope.height;
+    sctx.clearRect(0,0,w,h);
+
+    var layers = stageForValue(value); // 0..4
+    var amp = h*0.06 + (value/100)*h*0.18;
+
+    sctx.strokeStyle = 'rgba(234,240,245,0.06)';
+    sctx.lineWidth = 1;
+    sctx.beginPath(); sctx.moveTo(0,h/2); sctx.lineTo(w,h/2); sctx.stroke();
+
+    var colors = ['#35d6c0','#8f83ff','#ff6f9c','#ffb454'];
+    sctx.lineWidth = 2*devicePixelRatio;
+
+    for(var L=0; L<Math.max(layers,1); L++){
+      sctx.beginPath();
+      sctx.strokeStyle = colors[L % colors.length];
+      sctx.globalAlpha = layers === 0 ? 0.25 : 0.85 - L*0.12;
+      var freq = 0.01 + L*0.015;
+      var noiseAmt = layers >= 1 ? (1 - Math.min(layers,2)*0.15) : 1;
+      for(var x=0; x<=w; x+=3){
+        var base = Math.sin(x*freq + t2*(1+L*0.3)) * amp * (1/(L+1)*1.4);
+        var noise = layers >= 1 ? (Math.random()-0.5) * amp * 0.5 * noiseAmt : (Math.random()-0.5)*amp*1.4;
+        var env = 1;
+        if(layers >= 3){
+          // envelope: fade in/out across width to visualize attack/decay
+          var p = x/w;
+          env = Math.sin(Math.PI * p);
+        }
+        var y = h/2 + (base*0.4 + noise*0.6) * env;
+        if(x===0) sctx.moveTo(x,y); else sctx.lineTo(x,y);
+      }
+      sctx.stroke();
+    }
+    sctx.globalAlpha = 1;
+    requestAnimationFrame(drawScope);
+  }
+
+  /* ---------- boot ---------- */
+  resizeAll();
+  drawHeroWave();
+  animateCards();
+  drawScope();
+
+})();
+</script>
+
+</body>
+</html>
