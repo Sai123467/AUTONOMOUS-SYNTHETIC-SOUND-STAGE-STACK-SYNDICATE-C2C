@@ -9,6 +9,10 @@ public class SoundstageRig : MonoBehaviour
     public AudioReverbFilter reverb;
     public Camera playerCamera;
 
+    public static bool IsInCave = false;
+    public Vector3 caveCenter = new Vector3(30f, 0f, 25f);
+    public float caveRadius = 14.0f; // Matches expanded cavern
+
     private CharacterController controller;
     private float rotX = 0f;
     private float stepCycle = 0f;
@@ -20,19 +24,20 @@ public class SoundstageRig : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         if (playerCamera == null) playerCamera = GetComponentInChildren<Camera>();
+        if (reverb == null) reverb = GetComponent<AudioReverbFilter>();
+        if (reverb == null && Camera.main != null) reverb = Camera.main.GetComponent<AudioReverbFilter>();
+
         Cursor.lockState = CursorLockMode.Locked;
     }
 
     void Update()
     {
-        if (collisionSoundCooldown > 0f)
-        {
-            collisionSoundCooldown -= Time.deltaTime;
-        }
+        if (collisionSoundCooldown > 0f) collisionSoundCooldown -= Time.deltaTime;
 
         HandleMouseLook();
         HandleMovementAndFoley();
         HandleSeasonalGazeAcoustics();
+        HandleCaveAcoustics();
         HandleHotkeys();
         HandleObstacleStrike();
     }
@@ -60,19 +65,14 @@ public class SoundstageRig : MonoBehaviour
         currentInputMoveDir = (transform.right * h + transform.forward * v).normalized;
         controller.SimpleMove(currentInputMoveDir * 4.5f);
 
-        // Footstep timing
         if (controller.isGrounded && controller.velocity.magnitude > 0.4f)
         {
             stepCycle += Time.deltaTime * controller.velocity.magnitude;
-            if (stepCycle > 1.8f)
+            if (stepCycle > 1.9f)
             {
                 if (foley != null && soundstage != null && !soundstage.isAudioMuted)
                 {
-                    // River runs along Z axis from X = -3.8f to X = +3.8f
                     bool isInsideRiver = Mathf.Abs(transform.position.x) <= 3.8f;
-
-                    // In Winter the river is frozen, so keep crunchy ice footsteps.
-                    // In Spring, Summer, Autumn: play watery splash footsteps.
                     if (isInsideRiver && soundstage.currentSeason != Season.Winter)
                     {
                         foley.TriggerWaterStep();
@@ -83,6 +83,33 @@ public class SoundstageRig : MonoBehaviour
                     }
                 }
                 stepCycle = 0.0f;
+            }
+        }
+    }
+
+    void HandleCaveAcoustics()
+    {
+        float distToCave = Vector3.Distance(
+            new Vector3(transform.position.x, 0f, transform.position.z),
+            new Vector3(caveCenter.x, 0f, caveCenter.z)
+        );
+        IsInCave = (distToCave <= caveRadius);
+
+        if (reverb != null)
+        {
+            if (IsInCave)
+            {
+                reverb.enabled = true;
+                reverb.reverbPreset = AudioReverbPreset.Cave;
+                reverb.dryLevel = 0f;
+                reverb.room = -100f;
+                reverb.roomHF = -500f;
+                reverb.decayTime = 3.2f; // Long stone echo decay
+                reverb.reflectionsLevel = -600f;
+            }
+            else
+            {
+                reverb.enabled = false;
             }
         }
     }
@@ -115,7 +142,7 @@ public class SoundstageRig : MonoBehaviour
                 {
                     foley.TriggerImpact(ImpactMaterial.Wood, 1.0f);
                 }
-                else if (hitName.Contains("boulder") || hitName.Contains("rock") || hitName.Contains("croc"))
+                else if (hitName.Contains("boulder") || hitName.Contains("rock") || hitName.Contains("croc") || hitName.Contains("cave") || hitName.Contains("monster") || hitName.Contains("altar"))
                 {
                     foley.TriggerImpact(ImpactMaterial.Rock, 1.2f);
                 }
@@ -144,7 +171,7 @@ public class SoundstageRig : MonoBehaviour
                     foley.TriggerImpact(ImpactMaterial.Wood, 0.65f);
                     collisionSoundCooldown = 0.35f;
                 }
-                else if (hitName.Contains("boulder") || hitName.Contains("rock") || hitName.Contains("croc"))
+                else if (hitName.Contains("boulder") || hitName.Contains("rock") || hitName.Contains("croc") || hitName.Contains("cave"))
                 {
                     foley.TriggerImpact(ImpactMaterial.Rock, 0.75f);
                     collisionSoundCooldown = 0.35f;
@@ -164,22 +191,19 @@ public class SoundstageRig : MonoBehaviour
 
         if (Keyboard.current.digit1Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Happy);
         if (Keyboard.current.digit2Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Panic);
-        if (Keyboard.current.digit3Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Storm);
-        if (Keyboard.current.digit4Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Anger);
-        if (Keyboard.current.digit5Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Lust);
-        if (Keyboard.current.digit6Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Disgust);
-        if (Keyboard.current.digit7Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Neutral);
+        if (Keyboard.current.digit3Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Anger);
+        if (Keyboard.current.digit4Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Lust);
+        if (Keyboard.current.digit5Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Disgust);
+        if (Keyboard.current.digit6Key.wasPressedThisFrame) soundstage.SetEmotion(EmotionMode.Neutral);
 
         if (Keyboard.current.mKey.wasPressedThisFrame)
         {
             soundstage.isAudioMuted = !soundstage.isAudioMuted;
-            Debug.Log("[Soundstage] Audio Mute Toggled: " + soundstage.isAudioMuted);
         }
 
         if (Keyboard.current.tKey.wasPressedThisFrame)
         {
             soundstage.isComparisonMode = !soundstage.isComparisonMode;
-            Debug.Log("[Soundstage] A/B Comparison Mode: " + soundstage.isComparisonMode);
         }
 
         if (Keyboard.current.tabKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame)

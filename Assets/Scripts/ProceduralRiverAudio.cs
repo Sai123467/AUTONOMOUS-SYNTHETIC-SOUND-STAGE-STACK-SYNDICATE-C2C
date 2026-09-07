@@ -10,7 +10,6 @@ public class ProceduralRiverAudio : MonoBehaviour
     public float audibleDistance = 18f;
     [Range(0f, 1.5f)] public float masterWaterVolume = 0.85f;
 
-    // Thread-safe cached values passed from Update() to audio thread
     private float cachedDistanceGain = 0f;
     private Season cachedSeason = Season.Summer;
     private bool cachedIsMuted = false;
@@ -47,7 +46,6 @@ public class ProceduralRiverAudio : MonoBehaviour
         }
     }
 
-    // Update runs on the MAIN THREAD where accessing .position is safe
     void Update()
     {
         if (soundstage != null)
@@ -56,7 +54,6 @@ public class ProceduralRiverAudio : MonoBehaviour
             cachedSeason = soundstage.currentSeason;
         }
 
-        // Calculate distance on the main thread
         float distance = 100f;
         if (listenerTransform != null)
         {
@@ -67,7 +64,6 @@ public class ProceduralRiverAudio : MonoBehaviour
         cachedDistanceGain = gain * gain;
     }
 
-    // Runs on the AUDIO DSP THREAD
     void OnAudioFilterRead(float[] data, int channels)
     {
         if (cachedIsMuted || cachedDistanceGain <= 0.0001f)

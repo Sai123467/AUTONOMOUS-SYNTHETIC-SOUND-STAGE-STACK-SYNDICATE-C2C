@@ -13,13 +13,13 @@ public class ProceduralSoundstage : MonoBehaviour
     public bool isComparisonMode = false;
 
     [Header("Balanced Volumes")]
-    [Range(0f, 0.5f)] public float windBaseVolume = 0.08f;
+    [Range(0f, 0.5f)] public float windBaseVolume = 0.07f;
     [Range(0f, 2.0f)] public float emotionDroneVolume = 0.85f;
     [Range(20f, 4000f)] public float windCutoff = 450f;
-    [Range(0f, 1f)] public float weatherIntensity = 0.4f;
+    [Range(0f, 1f)] public float weatherIntensity = 0.35f;
 
-    [Header("Spring Rain Audio Settings")]
-    [Range(0f, 1.5f)] public float springRainVolume = 0.65f; // Rain volume multiplier
+    [Header("Spring Rain Audio Settings (Balanced)")]
+    [Range(0f, 1.0f)] public float springRainVolume = 0.22f;
 
     [Range(0f, 1f)] public float tensionLevel = 0.0f;
     [Range(-1f, 1f)] public float harmonicMode = 0.0f;
@@ -53,13 +53,11 @@ public class ProceduralSoundstage : MonoBehaviour
     public void CycleNextSeason()
     {
         currentSeason = (Season)(((int)currentSeason + 1) % 4);
-        Debug.Log("[Soundstage] Season Switched: " + currentSeason);
     }
 
     public void SetEmotion(EmotionMode emotion)
     {
         currentEmotion = emotion;
-        Debug.Log("[Soundstage] Emotion Switched: " + currentEmotion);
     }
 
     void OnAudioFilterRead(float[] data, int channels)
@@ -85,16 +83,14 @@ public class ProceduralSoundstage : MonoBehaviour
             return;
         }
 
-        // Wind 1-Pole Low-Pass Filter coefficient
         float rc = 1.0f / (2.0f * Mathf.PI * Mathf.Max(20f, windCutoff));
         float dt = 1.0f / sampleRate;
         float alpha = dt / (rc + dt);
 
-        // Spring Rain Band-Pass Filter coefficients (pass between 1.2 kHz - 7.5 kHz)
-        float rcRainLow = 1.0f / (2.0f * Mathf.PI * 7500f);
+        float rcRainLow = 1.0f / (2.0f * Mathf.PI * 6500f);
         float alphaRainLow = dt / (rcRainLow + dt);
 
-        float rcRainHigh = 1.0f / (2.0f * Mathf.PI * 1200f);
+        float rcRainHigh = 1.0f / (2.0f * Mathf.PI * 1400f);
         float alphaRainHigh = dt / (rcRainHigh + dt);
 
         float f1 = 130.81f, f2 = 196.00f, f3 = 261.63f;
@@ -135,40 +131,35 @@ public class ProceduralSoundstage : MonoBehaviour
 
         for (int i = 0; i < data.Length; i += channels)
         {
-            // 1. Procedural Wind (Low-Pass Filtered Noise)
             float whiteNoise = (float)(random.NextDouble() * 2.0 - 1.0);
             filterMemory = filterMemory + alpha * (whiteNoise - filterMemory);
             float windSample = filterMemory * windBaseVolume * (weatherIntensity + 0.1f);
 
-            // 2. Procedural Spring Rain Bed & Droplet Synthesis
             float rainSample = 0.0f;
             if (currentSeason == Season.Spring || currentEmotion == EmotionMode.Storm)
             {
-                // Continuous rain noise bed: band-pass filtered white noise (removes deep mud rumble, keeps crisp sizzle)
                 rainFilterLow = rainFilterLow + alphaRainLow * (whiteNoise - rainFilterLow);
                 rainFilterHigh = rainFilterHigh + alphaRainHigh * (rainFilterLow - rainFilterHigh);
-                float rainContinuous = (rainFilterLow - rainFilterHigh) * 0.32f;
+                float rainContinuous = (rainFilterLow - rainFilterHigh) * 0.18f;
 
-                // Random distinct droplet impacts (pings/splashes on leaves)
-                if (random.NextDouble() < 0.0025)
+                if (random.NextDouble() < 0.0008)
                 {
-                    dropletDecay = 1.0f;
+                    dropletDecay = 0.8f;
                     dropletPhase = 0.0f;
-                    dropletFreq = (float)(random.NextDouble() * 1200.0 + 900.0); // 900 Hz - 2100 Hz droplet splash
+                    dropletFreq = (float)(random.NextDouble() * 1000.0 + 1000.0);
                 }
 
                 float dropletSample = 0f;
                 if (dropletDecay > 0.01f)
                 {
                     dropletPhase += 2.0f * Mathf.PI * dropletFreq / sampleRate;
-                    dropletSample = Mathf.Sin(dropletPhase) * dropletDecay * 0.45f;
-                    dropletDecay *= 0.9982f; // Fast, resonant droplet dissipation
+                    dropletSample = Mathf.Sin(dropletPhase) * dropletDecay * 0.25f;
+                    dropletDecay *= 0.9975f;
                 }
 
                 rainSample = (rainContinuous + dropletSample) * springRainVolume;
             }
 
-            // 3. LFO & Drone Synthesis
             lfoPhase += 2.0f * Mathf.PI * lfoSpeed / sampleRate;
             if (lfoPhase > 2.0f * Mathf.PI) lfoPhase -= 2.0f * Mathf.PI;
             float lfoVal = (Mathf.Sin(lfoPhase) + 1.0f) * 0.5f;
@@ -196,7 +187,6 @@ public class ProceduralSoundstage : MonoBehaviour
                 droneSample *= (0.6f + 0.4f * lfoVal) * emotionDroneVolume;
             }
 
-            // Mix Master Output
             float finalMix = windSample + droneSample + rainSample;
 
             for (int c = 0; c < channels; c++)

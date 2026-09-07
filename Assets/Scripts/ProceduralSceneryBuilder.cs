@@ -80,7 +80,7 @@ public class ProceduralSceneryBuilder : MonoBehaviour
         PopulateSeasonBiome(autumnRoot, new Color(0.60f, 0.38f, 0.18f), new Color(0.85f, 0.35f, 0.08f), Season.Autumn);
 
         snowEffect = CreateWeatherParticles("Snow_Emitter", worldRoot.transform, new Color(1f, 1f, 1f, 0.8f), 150, 4f, 0.25f, false);
-        rainEffect = CreateWeatherParticles("Rain_Emitter", worldRoot.transform, new Color(0.7f, 0.85f, 1f, 0.6f), 450, 18f, 0.08f, true);
+        rainEffect = CreateWeatherParticles("Rain_Emitter", worldRoot.transform, new Color(0.7f, 0.85f, 1f, 0.55f), 140, 16f, 0.06f, true);
         leavesEffect = CreateWeatherParticles("Leaves_Emitter", worldRoot.transform, new Color(0.85f, 0.4f, 0.1f, 0.9f), 60, 2.5f, 0.35f, false);
 
         springRiverSplashes = CreateRiverSplashParticles("Spring_River_Splashes", springRoot.transform);
@@ -150,7 +150,9 @@ public class ProceduralSceneryBuilder : MonoBehaviour
             float x = (float)(rnd.NextDouble() * 88.0 - 44.0);
             float z = (float)(rnd.NextDouble() * 88.0 - 44.0);
 
-            if (Mathf.Abs(x) < 7.0f) continue; // Keep river corridor clear
+            // Avoid spawning in river, player start, and cave area (Cave center at X: 30, Z: 25)
+            if (Mathf.Abs(x) < 7.0f) continue;
+            if (Vector2.Distance(new Vector2(x, z), new Vector2(30f, 25f)) < 18.0f) continue;
             if (Mathf.Abs(x) < 4.5f && Mathf.Abs(z) < 4.5f) continue;
 
             float heightMod = (float)(rnd.NextDouble() * 0.8 + 0.8);
@@ -240,6 +242,7 @@ public class ProceduralSceneryBuilder : MonoBehaviour
             float fz = (float)(rnd.NextDouble() * 86.0 - 43.0);
 
             if (Mathf.Abs(fx) < 6.5f) continue;
+            if (Vector2.Distance(new Vector2(fx, fz), new Vector2(30f, 25f)) < 16.0f) continue;
 
             Color petalColor = flowerColors[rnd.Next(flowerColors.Length)];
             Material petalMat = CreateFlatColorMaterial(petalColor, 0.2f);
@@ -281,6 +284,7 @@ public class ProceduralSceneryBuilder : MonoBehaviour
             float bx = (float)(rnd.NextDouble() * 84.0 - 42.0);
             float bz = (float)(rnd.NextDouble() * 84.0 - 42.0);
             if (Mathf.Abs(bx) < 6.5f) continue;
+            if (Vector2.Distance(new Vector2(bx, bz), new Vector2(30f, 25f)) < 16.0f) continue;
 
             GameObject bush = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             bush.name = "Bush";
@@ -293,7 +297,209 @@ public class ProceduralSceneryBuilder : MonoBehaviour
 
         PopulateUltraDenseGrass(parent, season, rnd);
         BuildSeasonalRiver(parent, season, rnd);
+        BuildScaryExpansiveCavern(parent, season);
         SpawnSeasonalWildlife(parent, season);
+    }
+
+    // Builds a large, fully walk-in, terrifying cavern at X = 30, Z = 25
+    private void BuildScaryExpansiveCavern(GameObject parent, Season season)
+    {
+        GameObject caveRoot = new GameObject("Cavern_Complex");
+        caveRoot.transform.SetParent(parent.transform);
+        caveRoot.transform.localPosition = new Vector3(30f, 0f, 25f);
+
+        Material darkRockMat = CreateFlatColorMaterial(new Color(0.10f, 0.09f, 0.12f), 0.05f);
+        Material bloodMat = CreateFlatColorMaterial(new Color(0.55f, 0.04f, 0.04f), 0.35f);
+        Material boneMat = CreateFlatColorMaterial(new Color(0.85f, 0.83f, 0.74f), 0.1f);
+
+        // 1. Dark Basalt Floor (Collider removed so the player walks seamlessly on terrain)
+        GameObject caveFloor = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        caveFloor.name = "Cave_Basalt_Floor";
+        caveFloor.transform.SetParent(caveRoot.transform);
+        caveFloor.transform.localPosition = new Vector3(0f, 0.01f, 0f);
+        caveFloor.transform.localScale = new Vector3(28f, 0.02f, 28f);
+        caveFloor.GetComponent<Renderer>().sharedMaterial = darkRockMat;
+        StripCollider(caveFloor);
+
+        // 2. High Ceiling Dome (NO COLLIDER - Zero collision ceiling)
+        GameObject caveRoof = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        caveRoof.name = "Cave_Ceiling_Arch";
+        caveRoof.transform.SetParent(caveRoot.transform);
+        caveRoof.transform.localPosition = new Vector3(0f, 9.5f, 0f);
+        caveRoof.transform.localScale = new Vector3(30f, 9.5f, 30f);
+        caveRoof.GetComponent<Renderer>().sharedMaterial = darkRockMat;
+        StripCollider(caveRoof);
+
+        // 3. Perimeter Walls with a HUGE 120-DEGREE OPEN WALK-IN ENTRANCE (150° to 270°)
+        int wallSegments = 24;
+        float radius = 13.5f;
+        for (int i = 0; i < wallSegments; i++)
+        {
+            float angle = (360f / wallSegments) * i;
+
+            // Wide open entrance facing straight towards map origin (0, 0)
+            if (angle >= 145f && angle <= 275f) continue;
+
+            float rad = angle * Mathf.Deg2Rad;
+            Vector3 wallPos = new Vector3(Mathf.Cos(rad) * radius, 4.5f, Mathf.Sin(rad) * radius);
+
+            GameObject wallRock = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            wallRock.name = "Cave_RockWall_" + i;
+            wallRock.transform.SetParent(caveRoot.transform);
+            wallRock.transform.localPosition = wallPos;
+            wallRock.transform.localRotation = Quaternion.Euler(Random.Range(-8f, 8f), angle, Random.Range(-6f, 6f));
+            wallRock.transform.localScale = new Vector3(4.8f, 9.5f, 4.8f);
+            wallRock.GetComponent<Renderer>().sharedMaterial = darkRockMat;
+        }
+
+        // Entrance Portal Framing Pillars (Colliders stripped to guarantee no getting stuck)
+        float[] entranceAngles = { 140f, 280f };
+        for (int e = 0; e < entranceAngles.Length; e++)
+        {
+            float rad = entranceAngles[e] * Mathf.Deg2Rad;
+            GameObject pillar = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            pillar.name = "Cave_Entrance_Pillar_" + e;
+            pillar.transform.SetParent(caveRoot.transform);
+            pillar.transform.localPosition = new Vector3(Mathf.Cos(rad) * radius, 4.0f, Mathf.Sin(rad) * radius);
+            pillar.transform.localScale = new Vector3(2.5f, 4.5f, 2.5f);
+            pillar.GetComponent<Renderer>().sharedMaterial = darkRockMat;
+            StripCollider(pillar);
+        }
+
+        // 4. Sharp Hanging Ceiling Stalactites (Colliders stripped)
+        for (int s = 0; s < 16; s++)
+        {
+            float sAngle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+            float sDist = Random.Range(2.5f, 11f);
+            Vector3 stalactitePos = new Vector3(Mathf.Cos(sAngle) * sDist, Random.Range(6.5f, 8.2f), Mathf.Sin(sAngle) * sDist);
+
+            GameObject spike = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            spike.name = "Ceiling_Stalactite_" + s;
+            spike.transform.SetParent(caveRoot.transform);
+            spike.transform.localPosition = stalactitePos;
+            spike.transform.localScale = new Vector3(0.5f, Random.Range(2.0f, 3.5f), 0.5f);
+            spike.transform.localRotation = Quaternion.Euler(Random.Range(-12f, 12f), 0f, Random.Range(-12f, 12f));
+            spike.GetComponent<Renderer>().sharedMaterial = darkRockMat;
+            StripCollider(spike);
+        }
+
+        // 5. Scary Blood Altar (Rear center of cave)
+        GameObject bloodAltar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        bloodAltar.name = "Scary_Blood_Altar";
+        bloodAltar.transform.SetParent(caveRoot.transform);
+        bloodAltar.transform.localPosition = new Vector3(0f, 0.45f, 8.5f);
+        bloodAltar.transform.localScale = new Vector3(3.5f, 0.9f, 2.4f);
+        bloodAltar.GetComponent<Renderer>().sharedMaterial = bloodMat;
+
+        // Blood Splatter Pools
+        for (int p = 0; p < 4; p++)
+        {
+            GameObject bloodPool = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            bloodPool.name = "Blood_Splatter_" + p;
+            bloodPool.transform.SetParent(caveRoot.transform);
+            bloodPool.transform.localPosition = new Vector3(Random.Range(-3.0f, 3.0f), 0.035f, 8.5f + Random.Range(-2.2f, 2.2f));
+            bloodPool.transform.localScale = new Vector3(Random.Range(1.4f, 2.8f), 0.01f, Random.Range(1.4f, 2.8f));
+            bloodPool.GetComponent<Renderer>().sharedMaterial = bloodMat;
+            StripCollider(bloodPool);
+        }
+
+        // 6. Scattered Victim Bones
+        for (int b = 0; b < 20; b++)
+        {
+            float bAngle = Random.Range(-30f, 150f) * Mathf.Deg2Rad;
+            float bDist = Random.Range(4.0f, 10.5f);
+
+            GameObject bone = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            bone.name = "Victim_Bone_" + b;
+            bone.transform.SetParent(caveRoot.transform);
+            bone.transform.localPosition = new Vector3(Mathf.Cos(bAngle) * bDist, 0.12f, Mathf.Sin(bAngle) * bDist);
+            bone.transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 85f);
+            bone.transform.localScale = new Vector3(0.12f, Random.Range(0.45f, 0.9f), 0.12f);
+            bone.GetComponent<Renderer>().sharedMaterial = boneMat;
+            StripCollider(bone);
+        }
+
+        // 7. Eerie Cavern Core Light (Atmospheric dim red glow)
+        GameObject scaryLightObj = new GameObject("Cavern_Eerie_Light");
+        scaryLightObj.transform.SetParent(caveRoot.transform);
+        scaryLightObj.transform.localPosition = new Vector3(0f, 4.0f, 2.5f);
+        Light caveLight = scaryLightObj.AddComponent<Light>();
+        caveLight.type = LightType.Point;
+        caveLight.color = new Color(0.95f, 0.12f, 0.08f);
+        caveLight.intensity = 2.0f;
+        caveLight.range = 28f;
+
+        // 8. Spawn the Cave Monster inside
+        SpawnCaveMonster(caveRoot);
+    }
+
+    private void StripCollider(GameObject obj)
+    {
+        Collider c = obj.GetComponent<Collider>();
+        if (c != null)
+        {
+            if (Application.isPlaying) Destroy(c);
+            else DestroyImmediate(c);
+        }
+    }
+
+    private void SpawnCaveMonster(GameObject caveRoot)
+    {
+        GameObject monsterObj = new GameObject("Cave_Monster");
+        monsterObj.transform.SetParent(caveRoot.transform);
+        monsterObj.transform.localPosition = new Vector3(0f, 1.2f, 2.0f);
+
+        ProceduralWildlife monsterAI = monsterObj.AddComponent<ProceduralWildlife>();
+        monsterAI.species = AnimalSpecies.CaveMonster;
+        monsterAI.isBoundToCave = true;
+        monsterAI.caveCenter = caveRoot.transform.position;
+        monsterAI.caveRadius = 10.0f;
+        monsterAI.triggerDistance = 14.0f; // Roars as soon as player enters the cavern
+
+        Material monsterSkin = CreateFlatColorMaterial(new Color(0.06f, 0.05f, 0.07f), 0.05f);
+        Material eyeGlow = CreateFlatColorMaterial(new Color(1.0f, 0.02f, 0.02f), 0.95f);
+
+        // Torso
+        GameObject torso = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        torso.name = "Monster_Torso";
+        torso.transform.SetParent(monsterObj.transform);
+        torso.transform.localPosition = Vector3.zero;
+        torso.transform.localScale = new Vector3(1.8f, 2.1f, 1.4f);
+        torso.GetComponent<Renderer>().sharedMaterial = monsterSkin;
+
+        // Head
+        GameObject head = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        head.name = "Monster_Head";
+        head.transform.SetParent(monsterObj.transform);
+        head.transform.localPosition = new Vector3(0f, 1.4f, 0.55f);
+        head.transform.localScale = new Vector3(1.3f, 1.1f, 1.3f);
+        head.GetComponent<Renderer>().sharedMaterial = monsterSkin;
+
+        // Glowing Red Eyes
+        GameObject eyeL = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        eyeL.transform.SetParent(monsterObj.transform);
+        eyeL.transform.localPosition = new Vector3(-0.38f, 1.5f, 1.22f);
+        eyeL.transform.localScale = new Vector3(0.22f, 0.22f, 0.22f);
+        eyeL.GetComponent<Renderer>().sharedMaterial = eyeGlow;
+
+        GameObject eyeR = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        eyeR.transform.SetParent(monsterObj.transform);
+        eyeR.transform.localPosition = new Vector3(0.38f, 1.5f, 1.22f);
+        eyeR.transform.localScale = new Vector3(0.22f, 0.22f, 0.22f);
+        eyeR.GetComponent<Renderer>().sharedMaterial = eyeGlow;
+
+        // Claws
+        GameObject armL = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        armL.transform.SetParent(monsterObj.transform);
+        armL.transform.localPosition = new Vector3(-1.35f, -0.2f, 0.25f);
+        armL.transform.localScale = new Vector3(0.6f, 1.9f, 0.7f);
+        armL.GetComponent<Renderer>().sharedMaterial = monsterSkin;
+
+        GameObject armR = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        armR.transform.SetParent(monsterObj.transform);
+        armR.transform.localPosition = new Vector3(1.35f, -0.2f, 0.25f);
+        armR.transform.localScale = new Vector3(0.6f, 1.9f, 0.7f);
+        armR.GetComponent<Renderer>().sharedMaterial = monsterSkin;
     }
 
     private void BuildSeasonalRiver(GameObject parent, Season season, System.Random rnd)
@@ -365,7 +571,6 @@ public class ProceduralSceneryBuilder : MonoBehaviour
         ProceduralRiverAudio riverAudio = riverGroup.AddComponent<ProceduralRiverAudio>();
         riverAudio.soundstage = soundstage;
 
-        // Spawn River Life (Fishes & Crocodiles) in Spring, Summer, Autumn
         if (season != Season.Winter)
         {
             SpawnAquaticRiverLife(riverGroup, season, riverElevation);
@@ -374,7 +579,6 @@ public class ProceduralSceneryBuilder : MonoBehaviour
 
     private void SpawnAquaticRiverLife(GameObject riverGroup, Season season, float waterY)
     {
-        // 1. Spawn Schools of Swimming Fishes (Spring & Summer)
         if (season == Season.Spring || season == Season.Summer)
         {
             int fishCount = (season == Season.Spring) ? 12 : 8;
@@ -395,7 +599,6 @@ public class ProceduralSceneryBuilder : MonoBehaviour
             }
         }
 
-        // 2. Spawn River Crocodiles (Summer & Autumn)
         if (season == Season.Summer || season == Season.Autumn)
         {
             int crocCount = (season == Season.Summer) ? 3 : 2;
@@ -419,18 +622,16 @@ public class ProceduralSceneryBuilder : MonoBehaviour
 
     private void BuildFishMesh(GameObject root, Season season)
     {
-        Color fishColor = (season == Season.Spring) ? new Color(1.0f, 0.45f, 0.15f) : new Color(0.2f, 0.75f, 0.95f); // Orange carp vs Blue trout
+        Color fishColor = (season == Season.Spring) ? new Color(1.0f, 0.45f, 0.15f) : new Color(0.2f, 0.75f, 0.95f);
         Material fishMat = CreateFlatColorMaterial(fishColor, 0.4f);
         Material finMat = CreateFlatColorMaterial(Color.white, 0.3f);
 
-        // Body
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         body.transform.SetParent(root.transform);
         body.transform.localPosition = Vector3.zero;
         body.transform.localScale = new Vector3(0.14f, 0.16f, 0.55f);
         body.GetComponent<Renderer>().sharedMaterial = fishMat;
 
-        // Tail Fin
         GameObject tail = GameObject.CreatePrimitive(PrimitiveType.Cube);
         tail.transform.SetParent(root.transform);
         tail.transform.localPosition = new Vector3(0f, 0f, -0.32f);
@@ -440,10 +641,9 @@ public class ProceduralSceneryBuilder : MonoBehaviour
 
     private void BuildCrocodileMesh(GameObject root)
     {
-        Material crocSkin = CreateFlatColorMaterial(new Color(0.18f, 0.28f, 0.14f), 0.1f); // Dark swamp green
+        Material crocSkin = CreateFlatColorMaterial(new Color(0.18f, 0.28f, 0.14f), 0.1f);
         Material eyeMat = CreateFlatColorMaterial(new Color(0.9f, 0.8f, 0.1f), 0.8f);
 
-        // Body
         GameObject body = GameObject.CreatePrimitive(PrimitiveType.Cube);
         body.name = "Croc_Body";
         body.transform.SetParent(root.transform);
@@ -451,7 +651,6 @@ public class ProceduralSceneryBuilder : MonoBehaviour
         body.transform.localScale = new Vector3(0.7f, 0.3f, 2.2f);
         body.GetComponent<Renderer>().sharedMaterial = crocSkin;
 
-        // Snout / Jaws
         GameObject snout = GameObject.CreatePrimitive(PrimitiveType.Cube);
         snout.name = "Croc_Snout";
         snout.transform.SetParent(root.transform);
@@ -459,7 +658,6 @@ public class ProceduralSceneryBuilder : MonoBehaviour
         snout.transform.localScale = new Vector3(0.5f, 0.2f, 0.9f);
         snout.GetComponent<Renderer>().sharedMaterial = crocSkin;
 
-        // Raised Eyes
         GameObject eyeR = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         eyeR.transform.SetParent(root.transform);
         eyeR.transform.localPosition = new Vector3(0.2f, 0.18f, 0.95f);
@@ -472,7 +670,6 @@ public class ProceduralSceneryBuilder : MonoBehaviour
         eyeL.transform.localScale = new Vector3(0.12f, 0.12f, 0.12f);
         eyeL.GetComponent<Renderer>().sharedMaterial = eyeMat;
 
-        // Tapered Tail
         GameObject tail = GameObject.CreatePrimitive(PrimitiveType.Cube);
         tail.transform.SetParent(root.transform);
         tail.transform.localPosition = new Vector3(0f, 0f, -1.6f);
@@ -493,11 +690,11 @@ public class ProceduralSceneryBuilder : MonoBehaviour
         main.startSpeed = 0.5f;
         main.startSize = 0.45f;
         main.startColor = new Color(0.9f, 0.95f, 1.0f, 0.8f);
-        main.maxParticles = 300;
+        main.maxParticles = 100;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
 
         var emission = ps.emission;
-        emission.rateOverTime = 120;
+        emission.rateOverTime = 40;
 
         var shape = ps.shape;
         shape.shapeType = ParticleSystemShapeType.Box;
@@ -555,6 +752,7 @@ public class ProceduralSceneryBuilder : MonoBehaviour
                 float gz = (float)(rnd.NextDouble() * 88.0 - 44.0);
 
                 if (Mathf.Abs(gx) < 6.0f) continue;
+                if (Vector2.Distance(new Vector2(gx, gz), new Vector2(30f, 25f)) < 16.0f) continue;
                 if (Mathf.Abs(gx) < 2.5f && Mathf.Abs(gz) < 2.5f) continue;
 
                 float yaw = (float)(rnd.NextDouble() * 360.0);
@@ -619,6 +817,7 @@ public class ProceduralSceneryBuilder : MonoBehaviour
             float rx = Random.Range(-36f, 36f);
             float rz = Random.Range(-36f, 36f);
             if (Mathf.Abs(rx) < 6f && Mathf.Abs(rz) < 6f) continue;
+            if (Vector2.Distance(new Vector2(rx, rz), new Vector2(30f, 25f)) < 16.0f) continue;
 
             GameObject animalObj = new GameObject(season.ToString() + "_Animal_" + i);
             animalObj.transform.SetParent(parent.transform);
